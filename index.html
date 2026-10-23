@@ -164,24 +164,15 @@ textarea.inp{resize:vertical}
 
 <script>
 /* =====================================================================
-   الإعدادات — حط بيانات Firebase هنا (الخطوات في الرسالة)
-   لو سبتها null الصفحة هتشتغل "وضع تجريبي" والداتا على نفس الجهاز بس
+   الإعدادات — حط هنا لينك Google Apps Script (الخطوات في الرسالة)
+   لو سبته فاضي الصفحة هتشتغل "وضع تجريبي" والداتا على نفس الجهاز بس
    ===================================================================== */
-const FIREBASE_CONFIG = null;
-/* مثال:
-const FIREBASE_CONFIG = {
-  apiKey: "AIza....",
-  authDomain: "my-shifts.firebaseapp.com",
-  databaseURL: "https://my-shifts-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "my-shifts",
-  appId: "1:123:web:abc"
-};
-*/
+const API_URL = 'https://script.google.com/macros/s/AKfycbzIVRZscGlnSrjVTyUudzUEJIEjUqThepr3_xhTyLk-7EnM_rFcPgC6QgUDdRlG7wTW/exec';
+// مثال: const API_URL = 'https://script.google.com/macros/s/AKfycb..../exec';
 
 // بصمة الباسورد الافتراضي (mghoname10) — تقدر تغيّره من الإعدادات جوه الصفحة
 const DEFAULT_ADMIN_HASH = 'f7f0d785f8dfb0c2c1559febd0dc31c001a380c07a4be8c4daf81f1136bb4577';
 
-const FB = 'https://www.gstatic.com/firebasejs/10.12.2/';
 const DAY_NAMES = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
 const MONTHS = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
 const ATT = {present:{t:'حضر',c:'#2f9e44'},late:{t:'متأخر',c:'#f08c00'},absent:{t:'غاب',c:'#e03131'},excused:{t:'إذن',c:'#1971c2'}};
@@ -192,7 +183,8 @@ const COLL = {
   statuses:{t:'حالة',f:['name','color','work']}
 };
 
-let state = {}, mode = 'local', fbdb = null, ready = false, online = true, pendingRender = false, deviceId;
+let state = {}, mode = 'local', ready = false, online = true, pendingRender = false, deviceId;
+let inflight = 0, writeSeq = 0, queue = [], pulling = false;
 let editCtx = null, confirmFn = null;
 const $app = document.getElementById('app'), $sheet = document.getElementById('sheet');
 
@@ -208,6 +200,7 @@ function getDeviceId(){let d=ls.get('sr_device');if(!d){d='d'+uid()+uid();ls.set
 function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s);});}
 let tt;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2300);}
 
+function ago(t){const m=Math.round((Date.now()-t)/60000);if(m<1)return 'دلوقتي';if(m<60)return `من ${m} دقيقة`;const h=Math.round(m/60);if(h<24)return `من ${h} ساعة`;const d=Math.round(h/24);return `من ${d} يوم`;}
 /* ---------- dates ---------- */
 const pad = n => String(n).padStart(2,'0');
 const toStr = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
@@ -249,8 +242,46 @@ function persist(){if(mode==='local')ls.set('sr_data',JSON.stringify(state));}
 function clean(v){return v===undefined?null:JSON.parse(JSON.stringify(v));}
 function saveMany(upd){
   const u={};Object.entries(upd).forEach(([p,v])=>{u[p]=clean(v);setPath(p,u[p]);});
-  if(mode==='fb')fbdb.ref().update(u).catch(e=>toast('حصل خطأ في الحفظ: '+e.message));else persist();
+  if(mode==='gas'){ls.set('sr_cache',JSON.stringify(state));queue.push(u);ls.set('sr_queue',JSON.stringify(queue));flush();}else persist();
   render();
+}
+/* ---------- مزامنة مع Google Sheets ---------- */
+async function api(body){
+  const r=body?await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)})
+              :await fetch(API_URL+(API_URL.includes('?')?'&':'?')+'t='+Date.now());
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  const j=await r.json(); if(j&&j.error) throw new Error(j.error); return j;
+}
+function setOnline(v){if(online!==v){online=v;render();}}
+async function flush(){
+  if(inflight||!queue.length) return;
+  const batch=queue.slice(),upd=Object.assign({},...batch);
+  inflight++;writeSeq++;
+  try{
+    const res=await api({upd});
+    queue=queue.slice(batch.length);ls.set('sr_queue',JSON.stringify(queue));
+    inflight--;setOnline(true);
+    if(!queue.length){state=res||{};queue.forEach(q=>Object.entries(q).forEach(([p,v])=>setPath(p,v)));ls.set('sr_cache',JSON.stringify(state));render();}
+    else flush();
+  }catch(e){inflight--;setOnline(false);}
+}
+async function pull(){
+  if(pulling||inflight) return;
+  if(queue.length) return flush();
+  pulling=true;const seq=writeSeq;
+  try{
+    const res=await api();
+    pulling=false;setOnline(true);
+    if(seq!==writeSeq||inflight||queue.length) return;
+    state=res||{};ls.set('sr_cache',JSON.stringify(state));
+    if(!state.meta){saveMany(seedData());}
+    ready=true;render();pingSeen();
+  }catch(e){pulling=false;setOnline(false);if(!ready)fatal('مش قادر أوصل للداتا. اتأكد من النت ومن لينك API_URL.');}
+}
+let seenDone=false;
+function pingSeen(){
+  if(seenDone||isAdmin()) return;const me=state.devices?.[deviceId];
+  if(me&&state.employees?.[me]){seenDone=true;save(`employees/${me}/seen`,Date.now());}
 }
 const save = (p,v) => saveMany({[p]:v});
 
@@ -279,7 +310,8 @@ function chipsFor(e,a){
 }
 const nav = (label,sub,act,input='') => `<div class="nav"><button class="arr" data-act="${act}" data-n="-1" aria-label="السابق">${I.prev}</button><div class="nav-mid">${label}${sub?`<small>${sub}</small>`:''}${input}</div><button class="arr" data-act="${act}" data-n="1" aria-label="التالي">${I.next}</button></div>`;
 const empty = (t,s='') => `<div class="empty"><b>${t}</b>${s?`<p>${s}</p>`:''}</div>`;
-const netBar = () => mode==='fb'&&!online ? '<div class="net">مفيش اتصال بالنت — التعديلات هتتبعت أول ما يرجع</div>' : '';
+const localWarn = () => mode==='local' ? '<div class="net">الصفحة مش متوصلة بـ Google Sheets — الداتا هنا على الموبايل ده بس ومش بتتشارك</div>' : '';
+const netBar = () => mode==='gas'&&!online ? '<div class="net">مفيش اتصال بالنت — التعديلات هتتبعت أول ما يرجع</div>' : '';
 
 function openSheet(html){$sheet.innerHTML=`<div class="backdrop" data-act="closeSheet"></div><div class="panel" role="dialog" aria-modal="true">${html}</div>`;$sheet.classList.add('open');document.body.style.overflow='hidden';}
 function closeSheet(){$sheet.classList.remove('open');$sheet.innerHTML='';document.body.style.overflow='';editCtx=null;if(pendingRender)render();}
@@ -313,7 +345,7 @@ function route(){
 /* ---------- entry screens ---------- */
 function pickView(){
   const emps=list('employees');
-  return `<div class="hero"><div class="logo">${I.cal}</div><h1>انت مين؟</h1><p>اختار اسمك مرة واحدة بس، والموبايل ده هيتربط بيه.</p></div>
+  return `${localWarn()}<div class="hero"><div class="logo">${I.cal}</div><h1>انت مين؟</h1><p>اختار اسمك مرة واحدة بس، والموبايل ده هيتربط بيه.</p></div>
   ${emps.length?`<div class="grid">${emps.map(e=>{const tk=isTaken(e.id);return `<button data-act="pick" data-id="${e.id}" class="${tk?'taken':''}">${esc(e.name)}${tk?'<small>متسجل</small>':''}</button>`;}).join('')}</div>`:empty('لسه مفيش موظفين','الأدمن لازم يضيف الأسامي الأول')}
   <div class="foot"><button class="link" data-act="toLogin">دخول الأدمن</button></div>`;
 }
@@ -333,7 +365,7 @@ function userView(id,own){
   const e=state.employees[id],T=today(),en=ent(T,id),a=attOf(T,id);
   const s=en?.shift&&state.shifts?.[en.shift],l=en?.loc&&state.locations?.[en.loc],st=en?.status&&state.statuses?.[en.status];
   let h=own?'':`<div class="pbar"><span>بتشوف صفحة ${esc(e.name)} زي ما هو شايفها</span><button data-act="endPreview">رجوع</button></div>`;
-  h+=`<header class="top"><div><div class="t-title">أهلاً يا ${esc(e.name)}</div><div class="t-sub">${dayName(T)} ${fullD(T)}</div></div></header>${netBar()}<div class="wrap">`;
+  h+=`<header class="top"><div><div class="t-title">أهلاً يا ${esc(e.name)}</div><div class="t-sub">${dayName(T)} ${fullD(T)}</div></div></header>${netBar()}${localWarn()}<div class="wrap">`;
   h+=`<div class="hc"><div class="hc-l">النهارده</div>`;
   if(en){
     h+=`<div class="hc-big">${st?esc(st.name):(s?esc(s.name):'—')}</div>`;
@@ -365,7 +397,7 @@ function adminView(){
   const tabs=[['today','اليوم',I.today],['week','الجدول',I.week],['emps','الموظفين',I.users],['reports','التقارير',I.chart],['settings','الإعدادات',I.gear]];
   const titles={today:'حضور اليوم',week:'جدول الأسبوع',emps:'الموظفين',reports:'تقارير الشهر',settings:'الإعدادات'};
   const body={today:tabToday,week:tabWeek,emps:tabEmps,reports:tabReports,settings:tabSettings}[view.tab]();
-  const warn=mode==='local'?`<div class="banner">وضع تجريبي: الداتا محفوظة على الجهاز ده بس. حط بيانات Firebase في الكود عشان الموظفين يشوفوا الجدول من موبايلاتهم.</div>`:'';
+  const warn=mode==='local'?`<div class="banner">وضع تجريبي: الداتا محفوظة على الجهاز ده بس. حط لينك Google Sheets في API_URL جوه الكود عشان الموظفين يشوفوا الجدول من موبايلاتهم.</div>`:'';
   return `<header class="top"><div><div class="t-title">${titles[view.tab]}</div><div class="t-sub">لوحة تحكم الأدمن</div></div><button class="hbtn" data-act="logout">خروج</button></header>${netBar()}
   <div class="wrap">${warn}${body}</div>
   <nav class="bnav"><div class="bnav-in">${tabs.map(([k,t,ic])=>`<button data-act="tab" data-v="${k}" class="${view.tab===k?'on':''}">${ic}<span>${t}</span></button>`).join('')}</div></nav>`;
@@ -421,7 +453,7 @@ function tabEmps(){
   if(!emps.length) return h+empty('مفيش موظفين لسه');
   emps.forEach((e,i)=>{
     const linked=e.device&&state.devices?.[e.device]===e.id;
-    h+=`<div class="card"><div class="emp-h"><div><b>${esc(e.name)}</b><div class="small ${linked?'ok':'muted'}">${linked?'● مربوط بموبايل':'○ لسه ماسجلش'}</div></div>
+    h+=`<div class="card"><div class="emp-h"><div><b>${esc(e.name)}</b><div class="small ${linked?'ok':'muted'}">${linked?'● مربوط بموبايل'+(e.seen?' · آخر دخول '+ago(e.seen):''):'○ لسه ماسجلش'}</div></div>
     <div class="ord"><button data-act="mvEmp" data-id="${e.id}" data-n="-1" ${i===0?'disabled':''} aria-label="لفوق">▲</button><button data-act="mvEmp" data-id="${e.id}" data-n="1" ${i===emps.length-1?'disabled':''} aria-label="لتحت">▼</button></div></div>
     <div class="emp-a"><button data-act="preview" data-id="${e.id}">صفحته</button><button data-act="renameEmp" data-id="${e.id}">تعديل الاسم</button>${linked?`<button data-act="unlink" data-id="${e.id}">فك الربط</button>`:''}<button class="danger" data-act="delEmp" data-id="${e.id}">حذف</button></div></div>`;
   });
@@ -453,7 +485,7 @@ function tabSettings(){
   h+=`<div class="card"><div class="card-h"><span>النسخة الاحتياطية</span></div><div class="set-body"><p class="hint" style="margin-top:0">نزّل نسخة من كل الداتا كل فترة، وتقدر ترجعها في أي وقت.</p>
   <div class="btns" style="margin-top:0"><button class="btn sec" data-act="exportJson">تنزيل نسخة</button><button class="btn sec" data-act="importJson">استرجاع نسخة</button></div>
   <div class="btns"><button class="btn danger" data-act="clearSchedule">مسح كل الجداول والحضور</button></div></div></div>`;
-  h+=`<p class="hint" style="text-align:center">${mode==='fb'?'متصل بـ Firebase — كل التعديلات بتظهر عند الموظفين على طول':'وضع تجريبي (من غير Firebase)'}</p>`;
+  h+=`<p class="hint" style="text-align:center">${mode==='gas'?'متصل بـ Google Sheets — التعديلات بتظهر عند الموظفين خلال ثواني':'وضع تجريبي (مش متوصل)'}</p>`;
   return h;
 }
 
@@ -518,7 +550,7 @@ const A={
   sel:(d,el)=>{const g=el.closest('[data-group]');if(g.dataset.multi){if(!el.dataset.lock)el.classList.toggle('on');}else{g.querySelectorAll('.on').forEach(x=>x.classList.remove('on'));el.classList.add('on');}},
   // entry
   pick:d=>{const e=state.employees?.[d.id];if(!e)return;if(isTaken(d.id))return toast('الاسم ده متسجل على موبايل تاني، كلم الأدمن');
-    confirmSheet(`انت ${esc(e.name)}؟`,'الموبايل ده هيتربط باسمك، ومش هتقدر تختار اسم تاني بعد كده. لو غلطت كلم الأدمن يفك الربط.','أيوه أنا',()=>{if(isTaken(d.id))return toast('الاسم ده اتسجل على موبايل تاني');saveMany({[`devices/${deviceId}`]:d.id,[`employees/${d.id}/device`]:deviceId});top0();});},
+    confirmSheet(`انت ${esc(e.name)}؟`,'الموبايل ده هيتربط باسمك، ومش هتقدر تختار اسم تاني بعد كده. لو غلطت كلم الأدمن يفك الربط.','أيوه أنا',()=>{if(isTaken(d.id))return toast('الاسم ده اتسجل على موبايل تاني');saveMany({[`devices/${deviceId}`]:d.id,[`employees/${d.id}/device`]:deviceId,[`employees/${d.id}/seen`]:Date.now()});seenDone=true;top0();});},
   toLogin:()=>{view.screen='login';render();top0();setTimeout(()=>document.getElementById('pw')?.focus(),100);},
   backPick:()=>{view.screen=null;document.activeElement?.blur();render();},
   togglePw:(d,el)=>{const i=document.getElementById('pw');i.type=i.type==='password'?'text':'password';el.textContent=i.type==='password'?'إظهار':'إخفاء';},
@@ -564,7 +596,7 @@ const C={
   setUMonth:el=>{if(el.value){view.uMonth=el.value;render();}},
   importJson:el=>{const f=el.files?.[0];el.value='';if(!f)return;const r=new FileReader();r.onload=()=>{let obj;try{obj=JSON.parse(r.result);}catch(e){return toast('الملف ده مش نسخة صحيحة');}
     if(!obj||!obj.meta||!obj.employees)return toast('الملف ده مش نسخة صحيحة');
-    confirmSheet('استرجاع النسخة','كل الداتا الحالية هتتبدل بالنسخة دي.','استرجع',()=>{if(mode==='fb'){fbdb.ref().set(obj).then(()=>toast('اترجعت النسخة')).catch(e=>toast('خطأ: '+e.message));}else{state=obj;persist();render();toast('اترجعت النسخة');}},true);};r.readAsText(f);}
+    confirmSheet('استرجاع النسخة','كل الداتا الحالية هتتبدل بالنسخة دي.','استرجع',()=>{saveMany({'':obj});toast('اترجعت النسخة');},true);};r.readAsText(f);}
 };
 const S={
   login:async form=>{const p=form.querySelector('#pw').value;const er=document.getElementById('pw-err');if(!p){er.textContent='اكتب الباسورد';return;}
@@ -584,13 +616,14 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$sheet.classList.co
 function fatal(msg){$app.innerHTML=`<div class="hero"><h1 style="font-size:20px">في مشكلة</h1><p>${esc(msg)}</p></div><div class="foot"><button class="btn" style="width:auto" onclick="location.reload()">جرّب تاني</button></div>`;}
 async function init(){
   deviceId=getDeviceId();
-  if(FIREBASE_CONFIG){
-    try{
-      await loadScript(FB+'firebase-app-compat.js');await loadScript(FB+'firebase-database-compat.js');
-      firebase.initializeApp(FIREBASE_CONFIG);fbdb=firebase.database();mode='fb';
-      fbdb.ref().on('value',s=>{state=s.val()||{};if(!state.meta){fbdb.ref().update(seedData());return;}ready=true;render();},err=>fatal('مش قادر أوصل للداتا: '+err.message));
-      let ot;fbdb.ref('.info/connected').on('value',s=>{clearTimeout(ot);if(s.val()){if(!online){online=true;render();}}else ot=setTimeout(()=>{online=false;render();},3000);});
-    }catch(e){fatal('مش قادر أحمّل Firebase. اتأكد من النت ومن بيانات FIREBASE_CONFIG.');}
+  if(API_URL){
+    mode='gas';
+    try{queue=JSON.parse(ls.get('sr_queue')||'[]')||[];}catch(e){queue=[];}
+    try{const c=JSON.parse(ls.get('sr_cache')||'null');if(c&&c.meta){state=c;ready=true;render();}}catch(e){}
+    pull();
+    setInterval(()=>{if(document.visibilityState==='visible')pull();},15000);
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')pull();});
+    window.addEventListener('online',()=>pull());
     return;
   }
   mode='local';try{state=JSON.parse(ls.get('sr_data')||'{}')||{};}catch(e){state={};}
