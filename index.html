@@ -205,6 +205,40 @@ a.btn{display:block;text-align:center;text-decoration:none}
 .tgl.on{background:var(--red)}
 .tgl.on::after{right:27px}
 .lockbar{background:#c92a2a;color:#fff;text-align:center;font-size:13px;font-weight:700;padding:6px 12px}
+.punch{margin-top:14px;width:100%;border:0;border-radius:14px;background:#fff;color:var(--blue);font-weight:800;font-size:18px;padding:14px;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 4px 14px rgba(0,0,0,.15)}
+.punch svg{width:28px;height:28px}
+.punch.out{color:#c92a2a}
+.punch.off{background:rgba(255,255,255,.14);color:#fff;font-size:14.5px;font-weight:700;box-shadow:none;padding:11px;text-align:center}
+.punch-info{margin-top:12px;background:rgba(255,255,255,.15);border-radius:12px;padding:8px 12px;font-size:14px;font-weight:700}
+.bigopt{display:flex;align-items:center;gap:14px;width:100%;text-align:right;background:#fff;border:0;border-radius:16px;box-shadow:0 0 0 1px var(--line),0 2px 8px rgba(16,32,60,.06);padding:16px;margin-bottom:12px}
+.bigopt:active{background:var(--soft)}
+.bo-ic{width:58px;height:58px;border-radius:16px;background:var(--soft);color:var(--blue);display:grid;place-items:center;flex-shrink:0}
+.bo-ic svg{width:34px;height:34px}
+.bigopt b{display:block;font-size:17px}
+.bigopt small{display:block;color:var(--muted);font-size:13px;font-weight:600;line-height:1.5}
+.logo svg{width:34px;height:34px}
+.cam{position:relative;width:min(250px,70vw);aspect-ratio:1;margin:16px auto 10px;border-radius:50%;overflow:hidden;background:#111}
+.cam video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+.cam-ring{position:absolute;inset:0;border-radius:50%;box-shadow:inset 0 0 0 5px rgba(255,255,255,.35);transition:.2s}
+.cam.ok .cam-ring{box-shadow:inset 0 0 0 7px var(--green)}
+.cam.bad .cam-ring{box-shadow:inset 0 0 0 7px var(--red)}
+#cam-msg{text-align:center;font-weight:800;font-size:17px;min-height:30px}
+.cam-prog{height:7px;background:var(--line);border-radius:9px;overflow:hidden;margin:8px 30px 0}
+.cam-prog span{display:block;height:100%;width:0;background:var(--green);transition:width .25s}
+.st-box{text-align:center;padding:14px 6px 4px}
+.st-box>b{display:block;font-size:20px;margin-top:10px}
+.st-box p{color:var(--muted);margin:8px 0 0;line-height:1.8}
+.st-ic{width:70px;height:70px;border-radius:50%;display:inline-grid;place-items:center;font-size:34px;font-weight:800}
+.st-ic.ok{background:#e3f6e8;color:var(--green)}
+.st-ic.bad{background:#fde8e8;color:var(--red)}
+.spin{width:46px;height:46px;border-radius:50%;border:5px solid var(--soft);border-top-color:var(--blue);margin:6px auto 0;animation:sp 0.8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.pl{display:flex;flex-wrap:wrap;gap:4px 14px;padding:0 14px 10px;font-size:13px;color:var(--text)}
+.pl span{display:inline-flex;align-items:center;gap:4px}
+.pl svg{width:15px;height:15px;color:var(--blue)}
+.pl small{color:var(--muted)}
+.pl-bad{color:var(--red);font-weight:700}
+.tgl.on.ok{background:var(--green)}
 .loading{display:grid;place-items:center;min-height:70vh;color:var(--muted);font-weight:700}
 #print{display:none}
 @media print{
@@ -232,7 +266,7 @@ a.btn{display:block;text-align:center;text-decoration:none}
    الإعدادات — حط هنا لينك Google Apps Script (الخطوات في الرسالة)
    لو سبته فاضي الصفحة هتشتغل "وضع تجريبي" والداتا على نفس الجهاز بس
    ===================================================================== */
-const API_URL = 'https://script.google.com/macros/s/AKfycbzIVRZscGlnSrjVTyUudzUEJIEjUqThepr3_xhTyLk-7EnM_rFcPgC6QgUDdRlG7wTW/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbzZPv3tD8ONtA4tPvHEDtNPNqHrtPwh3eFUrraYGwDb34qnsij8Pf_nRB9_vIh4fZ-qaA/exec';
 // مثال: const API_URL = 'https://script.google.com/macros/s/AKfycb..../exec';
 
 // بصمة الباسورد الافتراضي (mghoname10) — تقدر تغيّره من الإعدادات جوه الصفحة
@@ -290,7 +324,7 @@ const view = {screen:null,tab:'today',date:T0,week:weekStart(T0),month:T0.slice(
 /* ---------- data ---------- */
 const list = c => Object.entries(state[c]||{}).filter(([,v])=>v&&typeof v==='object').map(([id,v])=>({id,...v})).sort((a,b)=>((a.order??0)-(b.order??0))||String(a.name).localeCompare(String(b.name),'ar'));
 const ent = (d,e) => state.schedule?.[d]?.[e] || null;
-const attOf = (d,e) => state.attendance?.[d]?.[e] || null;
+const attOf = (d,e) => state.attendance?.[d]?.[e] || punchAtt(d,e) || null;
 const adminHash = () => state.settings?.adminHash || DEFAULT_ADMIN_HASH;
 const isAdmin = () => ls.get('sr_admin') === adminHash();
 const isTaken = id => {const dv=state.employees?.[id]?.device;return !!(dv&&dv!==deviceId&&state.devices?.[dv]===id);};
@@ -364,8 +398,309 @@ const I = {
   chart:sv('<path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/>'),
   gear:sv('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'),
   msg:sv('<path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-5 4V6a1 1 0 0 1 1-1z"/><path d="M8 10h8M8 13h5"/>'),
+  finger:sv('<path d="M12 11v4.5"/><path d="M8.6 8.4A4.5 4.5 0 0 1 16.5 11.5v2.5"/><path d="M7.5 12.5a4.6 4.6 0 0 1 .4-2.6"/><path d="M16.3 17.5a12 12 0 0 1-.9 3"/><path d="M9.2 21a9.5 9.5 0 0 0 1.1-4.5v-4.8a1.7 1.7 0 0 1 3.4 0v1.6"/><path d="M5.3 16.5a12 12 0 0 0 .7-4.5 6 6 0 0 1 9.4-5"/><path d="M18 9.5a6 6 0 0 1 .5 2.5v1"/><path d="M12.5 20.8a14 14 0 0 0 .8-3.5"/>'),
+  fingerS:sv('<path d="M12 11v4.5"/><path d="M8.6 8.4A4.5 4.5 0 0 1 16.5 11.5v2.5"/><path d="M9.2 21a9.5 9.5 0 0 0 1.1-4.5v-4.8a1.7 1.7 0 0 1 3.4 0v1.6"/><path d="M5.3 16.5a12 12 0 0 0 .7-4.5 6 6 0 0 1 9.4-5"/>'),
+  face:sv('<path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 9.5v1M15 9.5v1M12 9.5V13h-1M9.5 15.5a3.5 3.5 0 0 0 5 0"/>'),
   cal:`<svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg>`
 };
+
+/* ---------- البصمة: الوش والصباع والموقع ---------- */
+const FACE_LIB = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.15/dist/face-api.js';
+const FACE_MODELS = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.15/model/';
+const FACE_MATCH = 0.5;      // أقل من كده = نفس الشخص
+const EARLY_MIN = 60;        // البصمة بتفتح قبل الوردية بساعة
+const pset = () => state.settings || {};
+const punchOn = () => !pset().punchOff;
+const bioMode = () => pset().bioMode || 'both';
+const graceMin = () => pset().grace ?? 15;
+const liveOn = () => !pset().liveOff;
+const bioOf = id => state.employees?.[id]?.bio || null;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const fmtClock = t => {const d=new Date(t),h=d.getHours();return `${h%12||12}:${pad(d.getMinutes())}${h<12?'ص':'م'}`;};
+const pTime = (p,k) => typeof p?.[k+'S']==='number' ? p[k+'S'] : (typeof p?.[k]==='number' ? p[k] : null);
+const punchOf = (d,id) => state.punches?.[d]?.[id] || null;
+
+function shiftWin(d,id){
+  const en=ent(d,id),s=en?.shift&&state.shifts?.[en.shift];if(!s)return null;
+  const st=en.status&&state.statuses?.[en.status];
+  if(!s.start||!s.end)return {d,s,st,open:true};
+  const[h1,m1]=s.start.split(':').map(Number),[h2,m2]=s.end.split(':').map(Number);
+  const a=toDate(d);a.setHours(h1,m1,0,0);const b=toDate(d);b.setHours(h2,m2,0,0);if(b<=a)b.setDate(b.getDate()+1);
+  return {d,s,st,start:a.getTime(),end:b.getTime()};
+}
+function punchAtt(d,id){
+  const t=pTime(punchOf(d,id),'in');if(t==null)return null;
+  const w=shiftWin(d,id);if(!w||w.open)return 'present';
+  return t>w.start+graceMin()*60000?'late':'present';
+}
+function findOpen(id){
+  for(const d of [today(),addDays(today(),-1)]){const p=punchOf(d,id),ti=pTime(p,'in');
+    if(ti!=null&&pTime(p,'out')==null&&Date.now()-ti<20*3600e3)return d;}
+  return null;
+}
+function punchTarget(id){
+  const open=findOpen(id);if(open)return {ok:true,kind:'out',d:open};
+  const now=Date.now(),early=EARLY_MIN*60000;let noTimes=null,rest=null,next=null;
+  for(const d of [today(),addDays(today(),-1)]){
+    const w=shiftWin(d,id);if(!w)continue;
+    if(w.st&&!w.st.work){if(d===today())rest=`النهارده ${w.st.name} ليك`;continue;}
+    if(pTime(punchOf(d,id),'in')!=null)continue;
+    if(w.open){if(d===today())noTimes=d;continue;}
+    if(now>=w.start-early&&now<=w.end)return {ok:true,kind:'in',d,w};
+    if(now<w.start-early&&d===today())next=w;
+  }
+  if(noTimes)return {ok:true,kind:'in',d:noTimes};
+  if(pTime(punchOf(today(),id),'out')!=null)return {ok:false,msg:'سجّلت حضورك وانصرافك النهارده ✓'};
+  if(rest)return {ok:false,msg:rest};
+  if(next)return {ok:false,msg:`البصمة بتفتح الساعة ${fmtClock(next.start-early)}`};
+  return {ok:false,msg:'مفيش وردية ليك دلوقتي'};
+}
+
+/* الموقع */
+function distM(a,b,c,d){const R=6371000,r=x=>x*Math.PI/180;const h=Math.sin(r(c-a)/2)**2+Math.cos(r(a))*Math.cos(r(c))*Math.sin(r(d-b)/2)**2;return Math.round(2*R*Math.asin(Math.sqrt(h)));}
+function getPos(){return new Promise((res,rej)=>{if(!navigator.geolocation)return rej({code:9});navigator.geolocation.getCurrentPosition(p=>res(p.coords),rej,{enableHighAccuracy:true,timeout:20000,maximumAge:0});});}
+function geoCheck(c){
+  const gs=list('geos');if(!gs.length)return {ok:true,none:true};let best=null;
+  gs.forEach(g=>{const dist=distM(c.latitude,c.longitude,+g.lat,+g.lng),over=dist-(+g.r||100);if(!best||over<best.over)best={g,dist,over};});
+  return {ok:best.over<=0,...best};
+}
+function parseCoords(s){const m=String(s).match(/(-?\d{1,2}\.\d{3,})\s*,\s*(-?\d{1,3}\.\d{3,})/);return m?{lat:+m[1],lng:+m[2]}:null;}
+const mapLink=(lat,lng)=>`https://www.google.com/maps?q=${lat},${lng}`;
+
+/* بصمة الصباع (بصمة الموبايل نفسه) */
+const b64u=buf=>btoa(String.fromCharCode(...new Uint8Array(buf)));
+const ub64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+const rnd=n=>crypto.getRandomValues(new Uint8Array(n));
+async function fingerOK(){try{return !!(window.PublicKeyCredential&&await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable());}catch(e){return false;}}
+async function fingerCreate(id){
+  const e=state.employees[id];
+  const c=await navigator.credentials.create({publicKey:{challenge:rnd(32),rp:{name:'جدول الورديات'},
+    user:{id:new TextEncoder().encode((id+'.'+deviceId).slice(0,60)),name:e.name,displayName:e.name},
+    pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
+    authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required',residentKey:'discouraged'},timeout:60000,attestation:'none'}});
+  return b64u(c.rawId);
+}
+async function fingerVerify(cred){
+  const a=await navigator.credentials.get({publicKey:{challenge:rnd(32),allowCredentials:[{type:'public-key',id:ub64(cred),transports:['internal']}],userVerification:'required',timeout:60000}});
+  return !!(new Uint8Array(a.response.authenticatorData)[32]&4);
+}
+
+/* بصمة الوش (الكاميرا الأمامية) */
+let faceP=null,cam=null,camAbort=false;
+function loadFace(){
+  if(!faceP)faceP=(async()=>{
+    if(!window.faceapi)await loadScript(FACE_LIB);
+    await faceapi.tf?.ready?.();
+    await Promise.all([faceapi.nets.tinyFaceDetector.loadFromUri(FACE_MODELS),faceapi.nets.faceLandmark68Net.loadFromUri(FACE_MODELS),faceapi.nets.faceRecognitionNet.loadFromUri(FACE_MODELS)]);
+  })().catch(e=>{faceP=null;throw Object.assign(new Error('models'),{name:'ModelError'});});
+  return faceP;
+}
+const fOpts=()=>new faceapi.TinyFaceDetectorOptions({inputSize:320,scoreThreshold:0.5});
+const ear=p=>{const d=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);return (d(p[1],p[5])+d(p[2],p[4]))/(2*d(p[0],p[3]));};
+const eyes=lm=>(ear(lm.getLeftEye())+ear(lm.getRightEye()))/2;
+function stopCam(){try{cam&&cam.getTracks().forEach(t=>t.stop());}catch(e){}cam=null;}
+function camSheet(title){
+  camAbort=false;
+  openSheet(`<div class="sh-h"><b>${title}</b></div><div class="cam" id="cam"><video id="cam-v" playsinline muted autoplay></video><div class="cam-ring"></div></div>
+  <div id="cam-msg">بيجهّز الكاميرا…</div><div class="cam-prog"><span id="cam-prog"></span></div>
+  <div class="btns"><button class="btn sec" data-act="closeSheet">إلغاء</button></div>`);
+  window.__onClose=()=>{camAbort=true;stopCam();};
+}
+function camMsg(t,cls){const m=document.getElementById('cam-msg');if(m)m.textContent=t;const c=document.getElementById('cam');if(c){c.classList.remove('ok','bad');if(cls)c.classList.add(cls);}}
+function camProg(f){const p=document.getElementById('cam-prog');if(p)p.style.width=Math.round(Math.max(0,Math.min(1,f))*100)+'%';}
+async function startCam(){
+  if(!navigator.mediaDevices?.getUserMedia)throw Object.assign(new Error(''),{name:'NoCamera'});
+  camMsg('بيحمّل التعرف على الوش… أول مرة بس بتاخد شوية');
+  const [,stream]=await Promise.all([loadFace(),navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640},height:{ideal:480}},audio:false})]);
+  cam=stream;if(camAbort){stopCam();return null;}
+  const v=document.getElementById('cam-v');if(!v){stopCam();return null;}
+  v.srcObject=stream;await v.play().catch(()=>{});
+  if(v.readyState<2)await new Promise(r=>v.addEventListener('loadeddata',r,{once:true}));
+  return v;
+}
+function camErr(e){
+  stopCam();window.__onClose=null;
+  const n=e?.name;
+  if(n==='NotAllowedError'||n==='SecurityError')failSheet('الكاميرا مقفولة','لازم تسمح للتطبيق يستخدم الكاميرا. افتح إعدادات المتصفح ← الموقع ← الكاميرا ← سماح، وجرّب تاني.');
+  else if(n==='ModelError')failSheet('مش قادر أحمّل التعرف على الوش','اتأكد إن النت شغال وجرّب تاني.');
+  else failSheet('الكاميرا مش شغالة','اتأكد إن مفيش تطبيق تاني فاتح الكاميرا وجرّب تاني.');
+  return 'err';
+}
+function faceSize(det,v){return det.detection.box.width>=v.videoWidth*0.2;}
+
+async function faceVerify(id){
+  const saved=bioOf(id).face;
+  camSheet('بصمة الوش');
+  let v;try{v=await startCam();}catch(e){return camErr(e);}
+  if(!v)return null;
+  const t0=Date.now();let match=0,miss=0,maxE=0,closed=false,blink=!liveOn();
+  camMsg('بص للكاميرا');
+  while(!camAbort&&Date.now()-t0<25000){
+    if(match<3||blink){
+      const det=await faceapi.detectSingleFace(v,fOpts()).withFaceLandmarks().withFaceDescriptor();
+      if(camAbort)break;
+      if(!det){camMsg('مش شايف وشك، بص للكاميرا');await sleep(60);continue;}
+      if(!faceSize(det,v)){camMsg('قرّب الموبايل من وشك');continue;}
+      const dist=faceapi.euclideanDistance(det.descriptor,saved);
+      if(dist<FACE_MATCH){match++;camMsg(blink?'تمام…':'خليك باصص…','ok');}
+      else if(dist>0.58&&det.detection.score>0.7){miss++;camMsg('ده مش الوش المتسجل','bad');}
+      if(miss>=4&&match===0){stopCam();return false;}
+      if(blink&&match>=4){camProg(1);camMsg('تمام ✓','ok');stopCam();await sleep(300);return true;}
+      if(match>=3&&!blink)camMsg('غمّض عينك ثانية وافتحها','ok');
+      camProg(match/(liveOn()?6:4));
+    } else {
+      // التأكد إنه وش حقيقي مش صورة: لازم يرمش
+      const det=await faceapi.detectSingleFace(v,fOpts()).withFaceLandmarks();
+      if(camAbort)break;
+      if(!det){camMsg('خليك باصص للكاميرا');continue;}
+      const e=eyes(det.landmarks);if(e>maxE)maxE=e;
+      if(e<maxE*0.72)closed=true;
+      else if(closed&&e>maxE*0.85){blink=true;camMsg('تمام، لحظة…','ok');camProg(0.8);}
+      if(!blink)camMsg(closed?'افتح عينك':'غمّض عينك ثانية وافتحها','ok');
+    }
+  }
+  stopCam();if(camAbort)return null;
+  return match>=3&&!blink?'noblink':'timeout';
+}
+
+async function enrollFace(id){
+  camSheet('تسجيل بصمة الوش');
+  let v;try{v=await startCam();}catch(e){camErr(e);return;}
+  if(!v)return;
+  const N=5,samples=[],t0=Date.now();camMsg('بص للكاميرا ومتتحركش');
+  while(!camAbort&&Date.now()-t0<30000&&samples.length<N){
+    const det=await faceapi.detectSingleFace(v,fOpts()).withFaceLandmarks().withFaceDescriptor();
+    if(camAbort)break;
+    if(!det){camMsg('مش شايف وشك، بص للكاميرا');await sleep(60);continue;}
+    if(!faceSize(det,v)){camMsg('قرّب الموبايل من وشك');continue;}
+    if(det.detection.score<0.7){camMsg('خلّي النور قدام وشك');continue;}
+    if(samples.length&&faceapi.euclideanDistance(det.descriptor,samples[0])>0.45){samples.length=0;camProg(0);camMsg('متتحركش، بص للكاميرا على طول');continue;}
+    samples.push(Array.from(det.descriptor));camProg(samples.length/N);camMsg('تمام، خليك ثابت…','ok');
+    await sleep(250);
+  }
+  stopCam();window.__onClose=null;
+  if(camAbort)return;
+  if(samples.length<N)return failSheet('ماعرفتش أسجّل وشك','جرّب في مكان منور، وخلّي وشك كله جوه الدايرة.');
+  const avg=new Array(128).fill(0);samples.forEach(s=>s.forEach((x,i)=>avg[i]+=x/N));
+  for(const e of list('employees')){
+    if(e.id===id||e.bio?.type!=='face'||!Array.isArray(e.bio.face))continue;
+    if(faceapi.euclideanDistance(avg,e.bio.face)<0.45){logFail(id,'dup');return failSheet('الوش ده متسجل لموظف تاني','كل موظف لازم يسجّل بوشه هو. لو في غلط كلم الأدمن.');}
+  }
+  save(`employees/${id}/bio`,{type:'face',face:avg.map(x=>Math.round(x*1e4)/1e4),dev:deviceId,at:Date.now()});
+  okSheet('اتسجلت بصمة وشك','من دلوقتي هتبص للكاميرا كل ما تسجّل حضور أو انصراف.');
+}
+async function enrollFinger(id){
+  if(!(await fingerOK()))return failSheet('موبايلك مش بيدعم بصمة الصباع','الموبايل ده مافيهوش بصمة أو مش متفعّلة. فعّلها من إعدادات الموبايل، أو اختار بصمة الوش.');
+  try{const cred=await fingerCreate(id);
+    save(`employees/${id}/bio`,{type:'finger',cred,dev:deviceId,at:Date.now()});
+    okSheet('اتسجلت بصمة صباعك','من دلوقتي هتحط صباعك على الحساس كل ما تسجّل حضور أو انصراف.');
+  }catch(e){if(e?.name==='NotAllowedError')return toast('اتلغى التسجيل');failSheet('ماقدرتش أسجّل البصمة','جرّب تاني، ولو مانفعش اختار بصمة الوش.');}
+}
+
+function logFail(id,kind,extra){save(`fails/${today()}/${id}/${Date.now()}`,kind+(extra!=null?':'+extra:''));}
+const failLabel=f=>{const[k,x]=String(f).split(':');return {face:'وش مختلف',finger:'بصمة غلط',geo:`بعيد ${x||''}م`,dup:'وش متسجل لحد تاني'}[k]||k;};
+
+function stepSheet(t){openSheet(`<div class="st-box"><div class="spin"></div><b>${t}</b></div>`);}
+function failSheet(t,m){try{navigator.vibrate&&navigator.vibrate([90,60,90]);}catch(e){}openSheet(`<div class="st-box"><div class="st-ic bad">✕</div><b>${t}</b><p>${m}</p></div><div class="btns"><button class="btn sec" data-act="closeSheet">تمام</button></div>`);}
+function okSheet(t,m){try{navigator.vibrate&&navigator.vibrate(160);}catch(e){}openSheet(`<div class="st-box"><div class="st-ic ok">✓</div><b>${t}</b><p>${m}</p></div><div class="btns"><button class="btn" data-act="closeSheet">تمام</button></div>`);}
+
+let punching=false;
+async function doPunch(){
+  const me=state.devices?.[deviceId];if(!me||punching)return;
+  const b=bioOf(me);if(!b)return render();
+  const tg=punchTarget(me);if(!tg.ok)return toast(tg.msg);
+  if(b.type==='finger'&&b.dev!==deviceId)return failSheet('البصمة متسجلة على موبايل تاني','كلم الأدمن يمسح بصمتك عشان تسجّلها تاني على الموبايل ده.');
+  punching=true;
+  try{
+    let dist=null;
+    if(list('geos').length){
+      stepSheet('بيحدد موقعك…');
+      let c;try{c=await getPos();}catch(e){return failSheet('ماقدرتش أعرف موقعك',e?.code===1?'لازم تسمح للتطبيق يعرف موقعك: إعدادات المتصفح ← الموقع ← سماح.':'شغّل الـ GPS (الموقع) من الموبايل وجرّب تاني.');}
+      const gc=geoCheck(c);
+      if(!gc.ok){logFail(me,'geo',gc.dist);return failSheet('انت بعيد عن مكان الشغل',`انت على بعد <b>${gc.dist} متر</b> من "${esc(gc.g.name)}"، والمسموح ${+gc.g.r||100} متر بس.${c.accuracy>100?'<br>الموقع مش دقيق دلوقتي، شغّل الـ GPS واقف في مكان مفتوح.':''}`);}
+      dist=gc.dist;
+    }
+    let ok;
+    if(b.type==='face'){ok=await faceVerify(me);}
+    else{stepSheet('حط صباعك على حساس البصمة…');try{ok=await fingerVerify(b.cred);}catch(e){ok=e?.name==='NotAllowedError'?'cancel':false;}}
+    if(ok===null||ok==='err')return;
+    if(ok==='cancel'){closeSheet();return toast('البصمة اتلغت أو ماتعرفتش، جرّب تاني');}
+    if(ok==='timeout')return failSheet('ماقدرتش أتأكد من وشك','جرّب في مكان منور وبص للكاميرا على طول.');
+    if(ok==='noblink')return failSheet('لازم ترمش بعينك','عشان نتأكد إن ده وشك انت مش صورة: غمّض عينك ثانية وافتحها وانت باصص للكاميرا.');
+    if(!ok){logFail(me,b.type);return failSheet(b.type==='face'?'الوش ده مش متسجل على الحساب ده':'البصمة مش مطابقة',b.type==='face'?'كل موظف بيبصم بوشه هو بس. المحاولة دي اتسجلت عند الأدمن.':'جرّب تاني بنفس الصباع اللي سجّلت بيه.');}
+    const now=Date.now(),k=tg.kind,base=`punches/${tg.d}/${me}/`;
+    const u={[base+k]:now,[base+k+'S']:'__NOW__',[base+k+'M']:b.type};if(dist!=null)u[base+k+'D']=dist;
+    saveMany(u);
+    let st='';
+    if(k==='in'){const w=shiftWin(tg.d,me);if(w&&!w.open&&now>w.start+graceMin()*60000)st=`اتسجلت <b style="color:var(--orange)">متأخر ${Math.round((now-w.start)/60000)} دقيقة</b>`;else st='اتسجلت <b style="color:var(--green)">حاضر</b>';}
+    okSheet(k==='in'?'اتسجل حضورك':'اتسجل انصرافك',`الساعة ${fmtClock(now)}${st?'<br>'+st:''}`);
+  }finally{punching=false;}
+}
+
+/* واجهة الموظف */
+function punchBox(id){
+  if(!punchOn())return '';
+  const T=today(),p=punchOf(T,id),open=findOpen(id),tg=punchTarget(id);
+  let info='';
+  if(open)info=`دخلت الساعة ${fmtClock(pTime(punchOf(open,id),'in'))}`;
+  else if(pTime(p,'in')!=null)info=`حضور ${fmtClock(pTime(p,'in'))}${pTime(p,'out')!=null?` · انصراف ${fmtClock(pTime(p,'out'))}`:''}`;
+  const btn=tg.ok?`<button class="punch ${tg.kind==='out'?'out':''}" data-act="punch">${I.finger}<span>${tg.kind==='out'?'بصمة الانصراف':'بصمة الحضور'}</span></button>`:`<div class="punch off">${esc(tg.msg)}</div>`;
+  return `${info?`<div class="punch-info">${info}</div>`:''}${btn}`;
+}
+function enrollView(id){
+  const e=state.employees[id],m=bioMode();
+  const face=`<button class="bigopt" data-act="enrollFace"><span class="bo-ic">${I.face}</span><span><b>بصمة الوش</b><small>الكاميرا الأمامية بتتعرف على وشك، ومحدش غيرك يقدر يبصم مكانك</small></span></button>`;
+  const fing=`<button class="bigopt" data-act="enrollFinger"><span class="bo-ic">${I.finger}</span><span><b>بصمة الصباع</b><small>بتستخدم حساس البصمة اللي في موبايلك</small></span></button>`;
+  return `<header class="top"><div><div class="t-title">أهلاً يا ${esc(e.name)}</div><div class="t-sub">خطوة واحدة وتخلص</div></div></header>${netBar()}${localWarn()}
+  <div class="wrap"><div class="hero" style="padding:16px 4px 8px"><div class="logo">${I.finger}</div><h1 style="font-size:23px">سجّل بصمتك</h1><p>أول مرة بس. هتستخدمها كل يوم عشان تسجّل حضورك وانصرافك.</p></div>
+  ${m!=='finger'?face:''}${m!=='face'?fing:''}
+  <p class="hint" style="text-align:center;margin-top:14px">البصمة بتتحفظ للحساب ده بس. لو حد تاني حاول يبصم مكانك هيترفض والأدمن هيعرف.</p></div>${credit()}`;
+}
+
+/* واجهة الأدمن */
+function punchLine(d,id){
+  const p=punchOf(d,id),fs=Object.values(state.fails?.[d]?.[id]||{});if(!p&&!fs.length)return '';
+  const ti=pTime(p,'in'),to=pTime(p,'out'),m=k=>({face:'وش',finger:'صباع'}[p?.[k+'M']]||'')+(p?.[k+'D']!=null?` · ${p[k+'D']}م`:'');
+  let h='<div class="pl">';
+  if(ti!=null)h+=`<span>${I.fingerS}دخول <b>${fmtClock(ti)}</b> <small>${m('in')}</small></span>`;
+  if(to!=null)h+=`<span>خروج <b>${fmtClock(to)}</b> <small>${m('out')}</small></span>`;
+  if(fs.length)h+=`<span class="pl-bad">⚠ ${fs.length} محاولة مرفوضة: ${[...new Set(fs.map(failLabel))].join('، ')}</span>`;
+  return h+'</div>';
+}
+function punchMini(d,id){const p=punchOf(d,id),ti=pTime(p,'in'),to=pTime(p,'out');if(ti==null)return '';return `<div class="small muted">بصمة: دخول ${fmtClock(ti)}${to!=null?` · خروج ${fmtClock(to)}`:''}</div>`;}
+function bioSettings(){
+  const on=punchOn(),m=bioMode(),g=graceMin(),gs=list('geos');
+  let h=`<div class="card"><div class="card-h"><span>البصمة والموقع</span></div><div class="set-body">
+  <div class="switch"><div><b>بصمة الحضور ${on?'شغالة':'مقفولة'}</b><span class="small muted">كل موظف بيسجّل بصمته أول مرة، وبعدين يبصم حضور وانصراف من موبايله</span></div><button class="tgl ${on?'on ok':''}" data-act="punchToggle" role="switch" aria-checked="${on}" aria-label="بصمة الحضور"></button></div>`;
+  if(on){
+    h+=`<label class="lbl">طريقة البصمة المسموحة</label><div class="pick">${[['both','الوش أو الصباع'],['face','الوش بس'],['finger','الصباع بس']].map(([k,t])=>`<button data-act="setBioMode" data-v="${k}" class="${m===k?'on':''}">${t}</button>`).join('')}</div>
+    <div class="switch" style="margin-top:14px"><div><b>لازم يرمش في بصمة الوش</b><span class="small muted">بيمنع حد يبصم بصورة زميله</span></div><button class="tgl ${liveOn()?'on ok':''}" data-act="liveToggle" role="switch" aria-checked="${liveOn()}" aria-label="الرمش"></button></div>
+    <label class="lbl">بيتحسب متأخر بعد بداية الوردية بـ</label><div class="pick">${[0,5,10,15,30].map(n=>`<button data-act="setGrace" data-v="${n}" class="${g===n?'on':''}">${n?n+' دقيقة':'على طول'}</button>`).join('')}</div>
+    <p class="hint" style="margin-bottom:0">البصمة بتفتح قبل الوردية بساعة. لازم كل وردية يكون ليها ميعاد بداية ونهاية من كارت الورديات تحت، وإلا البصمة هتتقبل في أي وقت وهيتحسب حاضر.</p>`;
+  }
+  h+=`</div></div>`;
+  if(on){
+    h+=`<div class="card"><div class="card-h"><span>أماكن البصمة</span><button class="hbtn sm" data-act="addGeo">+ إضافة</button></div>`;
+    h+=gs.length?gs.map(x=>`<div class="row" data-act="editGeo" data-id="${x.id}"><div style="flex:1"><b>${esc(x.name)}</b><div class="small muted">في حدود ${+x.r||100} متر</div></div><span class="chip loc">تعديل</span></div>`).join(''):`<div class="row muted" style="cursor:default;display:block">لسه ماحددتش مكان، فالبصمة شغالة من أي حتة.<br>روح مكان الشغل ودوس <b>+ إضافة</b> ← <b>استخدم موقعي دلوقتي</b>.</div>`;
+    h+='</div>';
+  }
+  return h;
+}
+function geoSheet(id){
+  const g=id?(state.geos?.[id]||{}):{r:100};
+  editCtx={geo:id||null};
+  openSheet(`<div class="sh-h"><b>${id?'تعديل':'إضافة'} مكان بصمة</b></div>
+  <label class="lbl" for="g-name">اسم المكان</label><input class="inp" id="g-name" value="${esc(g.name||'')}" placeholder="مثال: البوابة الرئيسية" autocomplete="off">
+  <label class="lbl">مكانه على الخريطة</label>
+  <button class="btn sec" data-act="geoHere">📍 استخدم موقعي دلوقتي</button><div class="small muted" id="g-acc" style="margin-top:6px"></div>
+  <input class="inp" id="g-paste" data-input="geoPaste" placeholder="أو الصق الإحداثيات أو لينك جوجل ماب" dir="ltr" style="margin-top:8px" autocomplete="off">
+  <div class="two" style="margin-top:8px"><input class="inp" id="g-lat" inputmode="decimal" placeholder="Latitude" dir="ltr" value="${g.lat??''}"><input class="inp" id="g-lng" inputmode="decimal" placeholder="Longitude" dir="ltr" value="${g.lng??''}"></div>
+  <div id="g-map" class="small" style="margin-top:6px">${g.lat!=null?`<a href="${mapLink(g.lat,g.lng)}" target="_blank" rel="noopener">افتح على الخريطة</a>`:''}</div>
+  <label class="lbl" for="g-r">المسافة المسموحة (بالمتر)</label><input class="inp" id="g-r" type="number" inputmode="numeric" min="10" step="10" value="${+g.r||100}" dir="ltr">
+  <p class="hint">أي بصمة أبعد من كده عن المكان هتترفض. 50 لـ 150 متر مناسبين لأن الـ GPS بتاع الموبايل مش دقيق 100%.</p>
+  <div class="btns"><button class="btn" data-act="saveGeo">حفظ</button>${id?'<button class="btn danger" data-act="delGeo">حذف</button>':''}</div>`);
+}
+function setGeoFields(lat,lng){const a=document.getElementById('g-lat'),b=document.getElementById('g-lng'),m=document.getElementById('g-map');if(a)a.value=lat;if(b)b.value=lng;if(m)m.innerHTML=`<a href="${mapLink(lat,lng)}" target="_blank" rel="noopener">افتح على الخريطة</a>`;}
 
 /* ---------- install (PWA) ---------- */
 let deferredPrompt=null;
@@ -455,7 +790,7 @@ const localWarn = () => mode==='local' ? '<div class="net">الصفحة مش م�
 const netBar = () => mode==='gas'&&!online ? '<div class="net">مفيش اتصال بالنت — التعديلات هتتبعت أول ما يرجع</div>' : '';
 
 function openSheet(html){$sheet.innerHTML=`<div class="backdrop" data-act="closeSheet"></div><div class="panel" role="dialog" aria-modal="true">${html}</div>`;$sheet.classList.add('open');document.body.style.overflow='hidden';}
-function closeSheet(){$sheet.classList.remove('open');$sheet.innerHTML='';document.body.style.overflow='';editCtx=null;if(pendingRender)render();}
+function closeSheet(){if(window.__onClose){const f=window.__onClose;window.__onClose=null;f();}$sheet.classList.remove('open');$sheet.innerHTML='';document.body.style.overflow='';editCtx=null;if(pendingRender)render();}
 function confirmSheet(title,msg,ok,fn,danger){confirmFn=fn;openSheet(`<div class="sh-h"><b>${title}</b></div><p class="msg">${msg}</p><div class="btns"><button class="btn ${danger?'danger':''}" data-act="confirmOk">${ok}</button><button class="btn sec" data-act="closeSheet">إلغاء</button></div>`);}
 const selVal = g => $sheet.querySelector(`[data-group="${g}"] .on`)?.dataset.v || '';
 
@@ -480,7 +815,7 @@ function route(){
   if(view.screen==='login') return loginView();
   if(state.settings?.payLock) return lockView();
   const me=state.devices?.[deviceId];
-  if(me&&state.employees?.[me]) return userView(me,true);
+  if(me&&state.employees?.[me]) return (punchOn()&&!bioOf(me))?enrollView(me):userView(me,true);
   return pickView();
 }
 
@@ -518,7 +853,7 @@ function loginView(){
 /* ---------- employee view ---------- */
 function dayRow(d,id){
   const en=ent(d,id),a=attOf(d,id),s=en?.shift&&state.shifts?.[en.shift];
-  return `<div class="drow ${d===today()?'is-today':''}"><div class="d-date"><b>${dayName(d)}</b><small>${shortD(d)}</small></div><div class="d-body"><div class="chips">${chipsFor(en,a)||'<span class="muted">مش متحدد</span>'}</div>${s&&s.start&&s.end?`<div class="small muted">${fmtTime(s.start)} – ${fmtTime(s.end)}</div>`:''}${en?.note?`<div class="small note-i">${esc(en.note)}</div>`:''}</div></div>`;
+  return `<div class="drow ${d===today()?'is-today':''}"><div class="d-date"><b>${dayName(d)}</b><small>${shortD(d)}</small></div><div class="d-body"><div class="chips">${chipsFor(en,a)||'<span class="muted">مش متحدد</span>'}</div>${s&&s.start&&s.end?`<div class="small muted">${fmtTime(s.start)} – ${fmtTime(s.end)}</div>`:''}${punchMini(d,id)}${en?.note?`<div class="small note-i">${esc(en.note)}</div>`:''}</div></div>`;
 }
 function userView(id,own){
   const e=state.employees[id],T=today(),en=ent(T,id),a=attOf(T,id);
@@ -536,6 +871,7 @@ function userView(id,own){
     if(en.note) h+=`<div class="hc-line"><span>ملاحظة</span><b>${esc(en.note)}</b></div>`;
   } else h+=`<div class="hc-big" style="font-size:19px">لسه مفيش جدول للنهارده</div>`;
   if(a&&ATT[a]) h+=`<div class="hc-line"><span>الحضور</span><span class="chip att-c" style="border-color:${ATT[a].c};color:${ATT[a].c}">${ATT[a].t}</span></div>`;
+  if(own) h+=punchBox(id);
   h+=`</div><div class="seg"><button data-act="uTab" data-v="week" class="${view.uTab==='week'?'on':''}">الأسبوع</button><button data-act="uTab" data-v="month" class="${view.uTab==='month'?'on':''}">الشهر</button></div>`;
   if(view.uTab==='week'){
     const ds=weekDates(view.uWeek);
@@ -575,7 +911,7 @@ function tabToday(){
   emps.forEach(e=>{
     const en=ent(d,e.id),a=attOf(d,e.id),st=en?.status&&state.statuses?.[en.status];
     h+=`<div class="card ${st&&!st.work?'dim':''}"><div class="row" data-act="edit" data-d="${d}" data-e="${e.id}"><div class="r-name">${esc(e.name)}</div><div class="chips">${chipsFor(en)||'<span class="muted small">مش متحدد — اضغط للتعديل</span>'}</div></div>
-    <div class="att">${Object.entries(ATT).map(([k,v])=>`<button data-act="att" data-d="${d}" data-e="${e.id}" data-k="${k}" class="${a===k?'on':''}" style="${a===k?`background:${v.c}`:''}">${v.t}</button>`).join('')}</div>
+    ${punchLine(d,e.id)}<div class="att">${Object.entries(ATT).map(([k,v])=>`<button data-act="att" data-d="${d}" data-e="${e.id}" data-k="${k}" class="${a===k?'on':''}" style="${a===k?`background:${v.c}`:''}">${v.t}</button>`).join('')}</div>
     ${en?.note?`<div class="note">${esc(en.note)}</div>`:''}</div>`;
   });
   return h;
@@ -616,9 +952,9 @@ function tabEmps(){
   if(!emps.length) return h+empty('مفيش موظفين لسه');
   emps.forEach((e,i)=>{
     const linked=e.device&&state.devices?.[e.device]===e.id;
-    h+=`<div class="card"><div class="emp-h"><div><b>${esc(e.name)}</b>${e.phone?`<div class="small muted" dir="ltr" style="text-align:right">${esc(e.phone)}</div>`:''}<div class="small ${linked?'ok':'muted'}">${linked?'● مربوط بموبايل'+(e.seen?' · آخر دخول '+ago(e.seen):''):'○ لسه ماسجلش'}</div></div>
+    h+=`<div class="card"><div class="emp-h"><div><b>${esc(e.name)}</b>${e.phone?`<div class="small muted" dir="ltr" style="text-align:right">${esc(e.phone)}</div>`:''}<div class="small ${e.bio?'ok':'muted'}">${e.bio?`● بصمة ${e.bio.type==='face'?'الوش':'الصباع'} متسجلة`:'○ لسه ماسجلش بصمة'}</div><div class="small ${linked?'ok':'muted'}">${linked?'● مربوط بموبايل'+(e.seen?' · آخر دخول '+ago(e.seen):''):'○ لسه ماسجلش'}</div></div>
     <div class="ord"><button data-act="mvEmp" data-id="${e.id}" data-n="-1" ${i===0?'disabled':''} aria-label="لفوق">▲</button><button data-act="mvEmp" data-id="${e.id}" data-n="1" ${i===emps.length-1?'disabled':''} aria-label="لتحت">▼</button></div></div>
-    <div class="emp-a"><button data-act="preview" data-id="${e.id}">صفحته</button><button data-act="renameEmp" data-id="${e.id}">تعديل</button>${linked?`<button data-act="unlink" data-id="${e.id}">فك الربط</button>`:''}<button class="danger" data-act="delEmp" data-id="${e.id}">حذف</button></div></div>`;
+    <div class="emp-a"><button data-act="preview" data-id="${e.id}">صفحته</button><button data-act="renameEmp" data-id="${e.id}">تعديل</button>${linked?`<button data-act="unlink" data-id="${e.id}">فك الربط</button>`:''}${e.bio?`<button data-act="resetBio" data-id="${e.id}">مسح البصمة</button>`:''}<button class="danger" data-act="delEmp" data-id="${e.id}">حذف</button></div></div>`;
   });
   return h;
 }
@@ -671,6 +1007,7 @@ function tabSettings(){
   let h=installBanner()+sec('الورديات','shifts',i=>`${chip(i.name,i.color||'#cfe2f3')}<span class="muted small">${i.start&&i.end?`${fmtTime(i.start)} – ${fmtTime(i.end)}`:'من غير مواعيد'}</span>`);
   h+=sec('أماكن الشغل','locations',i=>`<b>${esc(i.name)}</b>`);
   h+=sec('حالات العمل','statuses',i=>`${chip(i.name,i.color)}<span class="muted small">${i.work?'بيتحسب يوم شغل':'مش يوم شغل'}</span>`);
+  h+=bioSettings();
   const pl=!!state.settings?.payLock;
   h+=`<div class="card"><div class="card-h" style="${pl?'background:#c92a2a':''}"><span>وضع عدم الدفع</span></div><div class="set-body"><div class="switch"><div><b>${pl?'مفعّل':'مقفول'}</b><span class="small muted">لما يتفعل، أي حد مش أدمن هيشوف رسالة إن الخدمة متوقفة ولازم يتواصل على ${esc(CONTACT_PHONE)}</span></div><button class="tgl ${pl?'on':''}" data-act="payLock" role="switch" aria-checked="${pl}" aria-label="وضع عدم الدفع"></button></div>
   <div class="btns" style="margin-top:10px"><button class="btn sec" data-act="previewLock">شوف الرسالة اللي هتظهر</button></div></div></div>`;
@@ -718,8 +1055,8 @@ function xlsWeek(){
   downloadXlsx([{name:'الجدول',aoa:grid},{name:'تفاصيل',aoa:detailAoa(ds,emps),w:14}],`جدول ${fullD(ds[0]).replace(/\//g,'-')}.xlsx`);
 }
 function detailAoa(ds,emps){
-  const rows=[['التاريخ','اليوم','الاسم','الوردية','المكان','الحالة','الحضور','ملاحظات']];
-  ds.forEach(d=>emps.forEach(e=>{const en=ent(d,e.id),a=attOf(d,e.id);if(!en&&!a)return;rows.push([fullD(d),dayName(d),e.name,state.shifts?.[en?.shift]?.name||'',state.locations?.[en?.loc]?.name||'',state.statuses?.[en?.status]?.name||'',a?ATT[a].t:'',en?.note||'']);}));
+  const rows=[['التاريخ','اليوم','الاسم','الوردية','المكان','الحالة','الحضور','بصمة دخول','بصمة خروج','ملاحظات']];
+  ds.forEach(d=>emps.forEach(e=>{const en=ent(d,e.id),a=attOf(d,e.id);if(!en&&!a&&!punchOf(d,e.id))return;rows.push([fullD(d),dayName(d),e.name,state.shifts?.[en?.shift]?.name||'',state.locations?.[en?.loc]?.name||'',state.statuses?.[en?.status]?.name||'',a?ATT[a].t:'',(t=>t!=null?fmtClock(t):'')(pTime(punchOf(d,e.id),'in')),(t=>t!=null?fmtClock(t):'')(pTime(punchOf(d,e.id),'out')),en?.note||'']);}));
   return rows;
 }
 function xlsMonth(){
@@ -756,7 +1093,7 @@ const A={
   endPreview:()=>{view.preview=null;view.tab='emps';render();top0();},
   // schedule
   edit:d=>openEdit(d.d,d.e),
-  att:d=>{const cur=attOf(d.d,d.e);save(`attendance/${d.d}/${d.e}`,cur===d.k?null:d.k);},
+  att:d=>{const man=state.attendance?.[d.d]?.[d.e]||null;if(!man&&attOf(d.d,d.e)===d.k)return toast('ده متسجل من البصمة');save(`attendance/${d.d}/${d.e}`,man===d.k?null:d.k);},
   saveEdit:()=>{if(!editCtx)return;const{e}=editCtx;const v={shift:selVal('shift'),loc:selVal('loc'),status:selVal('status'),note:$sheet.querySelector('#f-note').value.trim()};Object.keys(v).forEach(k=>{if(!v[k])delete v[k];});
     const days=[...$sheet.querySelectorAll('[data-group="days"] .on')].map(b=>b.dataset.v);const upd={};days.forEach(x=>upd[`schedule/${x}/${e}`]=Object.keys(v).length?v:null);closeSheet();saveMany(upd);toast(days.length>1?`اتحفظ على ${days.length} أيام`:'اتحفظ');},
   clearEdit:()=>{if(!editCtx)return;const{d,e}=editCtx;closeSheet();save(`schedule/${d}/${e}`,null);toast('اتمسح');},
@@ -769,6 +1106,25 @@ const A={
     if(on){save('settings/payLock',null);toast('الخدمة رجعت تشتغل عادي');}
     else confirmSheet('تفعيل وضع عدم الدفع','كل الموظفين هيتقفل عليهم التطبيق ويظهرلهم رسالة التحذير ورقم التواصل، لحد ما تقفل الوضع ده تاني.','فعّله',()=>{save('settings/payLock',true);toast('وضع عدم الدفع اتفعل');},true);},
   previewLock:()=>{openSheet(`<div style="margin:-18px -16px 0">${lockView().replace(/<div class="foot"[\s\S]*?<\/div><\/div>$/,'</div>')}</div><div class="btns"><button class="btn sec" data-act="closeSheet">قفل المعاينة</button></div>`);},
+  // البصمة
+  punch:()=>doPunch(),
+  enrollFace:()=>{const me=state.devices?.[deviceId];if(me)enrollFace(me);},
+  enrollFinger:()=>{const me=state.devices?.[deviceId];if(me)enrollFinger(me);},
+  resetBio:d=>{const e=state.employees?.[d.id];if(!e)return;confirmSheet(`مسح بصمة ${esc(e.name)}`,'هيطلب منه يسجّل بصمته من جديد أول ما يفتح التطبيق.','امسح',()=>{save(`employees/${d.id}/bio`,null);toast('اتمسحت البصمة');},true);},
+  punchToggle:()=>{save('settings/punchOff',punchOn()?true:null);toast(punchOn()?'البصمة اتفعلت':'البصمة اتقفلت');},
+  setBioMode:d=>save('settings/bioMode',d.v==='both'?null:d.v),
+  liveToggle:()=>save('settings/liveOff',liveOn()?true:null),
+  setGrace:d=>save('settings/grace',+d.v),
+  addGeo:()=>geoSheet(),
+  editGeo:d=>geoSheet(d.id),
+  geoHere:async(d,el)=>{const acc=document.getElementById('g-acc');el.disabled=true;if(acc)acc.textContent='بيحدد موقعك…';
+    try{const c=await getPos();setGeoFields(+c.latitude.toFixed(6),+c.longitude.toFixed(6));if(acc)acc.textContent=`اتحدد ✓ (الدقة حوالي ${Math.round(c.accuracy)} متر)`;}
+    catch(e){if(acc)acc.textContent=e?.code===1?'لازم تسمح بالموقع من إعدادات المتصفح':'ماقدرتش أحدد موقعك، شغّل الـ GPS';}
+    el.disabled=false;},
+  saveGeo:()=>{const n=$sheet.querySelector('#g-name').value.trim(),lat=parseFloat($sheet.querySelector('#g-lat').value),lng=parseFloat($sheet.querySelector('#g-lng').value),r=Math.max(10,parseInt($sheet.querySelector('#g-r').value)||100);
+    if(!n)return toast('اكتب اسم المكان');if(!isFinite(lat)||!isFinite(lng)||Math.abs(lat)>90||Math.abs(lng)>180)return toast('حدد المكان على الخريطة الأول');
+    const id=editCtx?.geo||'g'+uid(),old=state.geos?.[id]||{order:Date.now()};closeSheet();save(`geos/${id}`,{...old,name:n,lat,lng,r});toast('اتحفظ المكان');},
+  delGeo:()=>{const id=editCtx?.geo;if(!id)return;confirmSheet('حذف المكان','البصمة مش هتتقبل من المكان ده تاني.','احذف',()=>save(`geos/${id}`,null),true);},
   // install
   install:async()=>{if(deferredPrompt){const p=deferredPrompt;deferredPrompt=null;p.prompt();try{await p.userChoice;}catch(e){}render();}else installHelp();},
   hideInstall:()=>{ls.set('sr_inst_hide','1');render();},
@@ -797,7 +1153,7 @@ const A={
   mvEmp:d=>{const emps=list('employees');const i=emps.findIndex(e=>e.id===d.id),j=i+(+d.n);if(i<0||j<0||j>=emps.length)return;[emps[i],emps[j]]=[emps[j],emps[i]];const upd={};emps.forEach((e,k)=>upd[`employees/${e.id}/order`]=k);saveMany(upd);},
   renameEmp:d=>{const e=state.employees?.[d.id];if(!e)return;editCtx={id:d.id};openSheet(`<div class="sh-h"><b>تعديل الموظف</b></div><label class="lbl" for="r-name">الاسم</label><input class="inp" id="r-name" value="${esc(e.name)}" autocomplete="off"><label class="lbl" for="r-phone">رقم الموبايل (للواتساب)</label><input class="inp" id="r-phone" type="tel" dir="ltr" placeholder="01xxxxxxxxx" value="${esc(e.phone||'')}" autocomplete="off"><div class="btns"><button class="btn" data-act="saveRename">حفظ</button><button class="btn sec" data-act="closeSheet">إلغاء</button></div>`);},
   saveRename:()=>{const n=$sheet.querySelector('#r-name').value.trim();if(!n)return toast('اكتب الاسم');const id=editCtx.id;const ph=$sheet.querySelector('#r-phone').value.trim();closeSheet();saveMany({[`employees/${id}/name`]:n,[`employees/${id}/phone`]:ph||null});toast('اتعدل');},
-  unlink:d=>{const e=state.employees?.[d.id];if(!e)return;confirmSheet(`فك ربط ${esc(e.name)}`,'الموبايل المربوط هيرجع لشاشة "انت مين؟" والموظف يقدر يختار اسمه تاني من أي موبايل.','فك الربط',()=>{saveMany({[`devices/${e.device}`]:null,[`employees/${d.id}/device`]:null});toast('اتفك الربط');},true);},
+  unlink:d=>{const e=state.employees?.[d.id];if(!e)return;confirmSheet(`فك ربط ${esc(e.name)}`,'الموبايل المربوط هيرجع لشاشة "انت مين؟" والموظف يقدر يختار اسمه تاني من أي موبايل.','فك الربط',()=>{saveMany({[`devices/${e.device}`]:null,[`employees/${d.id}/device`]:null,[`employees/${d.id}/bio`]:null});toast('اتفك الربط');},true);},
   delEmp:d=>{const e=state.employees?.[d.id];if(!e)return;confirmSheet(`حذف ${esc(e.name)}`,'الموظف هيتشال من الجداول والتقارير. متأكد؟','احذف',()=>{const u={[`employees/${d.id}`]:null};if(e.device&&state.devices?.[e.device]===d.id)u[`devices/${e.device}`]=null;saveMany(u);toast('اتحذف');},true);},
   // settings items
   addItem:d=>openItem(d.c), editItem:d=>openItem(d.c,d.id),
@@ -852,7 +1208,7 @@ const S={
   }
 };
 document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el||el.disabled)return;const f=A[el.dataset.act];if(f){e.preventDefault();f(el.dataset,el);}});
-document.addEventListener('input',e=>{if(e.target.dataset?.input==='mText'){draft.text=e.target.value;const pv=document.getElementById('m-prev');if(pv)pv.innerHTML=previewHtml();}});
+document.addEventListener('input',e=>{if(e.target.dataset?.input==='geoPaste'){const c=parseCoords(e.target.value);if(c)setGeoFields(c.lat,c.lng);return;}if(e.target.dataset?.input==='mText'){draft.text=e.target.value;const pv=document.getElementById('m-prev');if(pv)pv.innerHTML=previewHtml();}});
 document.addEventListener('change',e=>{const k=e.target.dataset?.change;if(k&&C[k])C[k](e.target);});
 document.addEventListener('submit',e=>{const k=e.target.dataset?.submit;if(!k)return;e.preventDefault();S[k]&&S[k](e.target);});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$sheet.classList.contains('open'))closeSheet();});
