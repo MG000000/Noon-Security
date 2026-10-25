@@ -10,8 +10,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f5fa8">
 <link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/png" href="icon-192.png">
-<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" href="app-icon-192.png">
+<link rel="apple-touch-icon" href="app-icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -159,7 +159,7 @@ textarea.inp{resize:vertical}
 .bnav button{position:relative}
 .bnav .badge{top:3px;left:calc(50% - 22px)}
 .install{display:flex;align-items:center;gap:10px;background:#fff;border-radius:14px;box-shadow:0 0 0 1px var(--line);padding:10px 12px;margin:0 0 12px}
-.install .ic{width:40px;height:40px;border-radius:11px;flex-shrink:0;background:var(--blue) url(icon-192.png) center/cover}
+.install .ic{width:40px;height:40px;border-radius:11px;flex-shrink:0;background:var(--blue) url(app-icon-192.png) center/cover}
 .install div{flex:1;line-height:1.35}
 .install b{display:block;font-size:14px}
 .install small{color:var(--muted);font-size:12px}
@@ -268,6 +268,20 @@ table.wg{border-collapse:separate;border-spacing:0;font-size:12px;min-width:100%
 .hlogo{width:40px;height:40px;border-radius:11px;background:#fff;object-fit:contain;flex-shrink:0;padding:2px}
 .top .hlogo+div{flex:1;min-width:0}
 .lock-logo{width:76px;height:76px;border-radius:18px;background:#fff;object-fit:contain;padding:4px;margin-bottom:8px}
+.zmap{height:min(52vh,420px);border-radius:14px;overflow:hidden;margin-top:12px;background:#dfe5ec;position:relative;box-shadow:0 0 0 1px var(--line)}
+.zmap-load{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-weight:700}
+.ztools{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.ztools button{border:0;background:var(--soft);color:var(--blue);border-radius:9px;padding:7px 11px;font-weight:700;font-size:13px}
+#alarm{position:fixed;inset:0;z-index:100;display:none;background:#c92a2a;color:#fff;animation:alb .8s steps(2) infinite}
+#alarm.show{display:grid;place-items:center}
+@keyframes alb{50%{background:#7a0e0e}}
+.al-in{text-align:center;padding:24px;max-width:420px}
+.al-ic{font-size:76px;line-height:1}
+.al-in h1{font-size:30px;margin:10px 0}
+.al-in p{font-size:18px;margin:8px 0;line-height:1.7}
+.al-in .al-sm{font-size:14px;opacity:.85}
+.al-in button{margin-top:18px;border:0;background:#fff;color:#c92a2a;font-weight:800;font-size:18px;border-radius:14px;padding:14px 26px}
+.mon-on{margin-top:10px;font-size:13px;font-weight:700;opacity:.9}
 .loading{display:grid;place-items:center;min-height:70vh;color:var(--muted);font-weight:700}
 #print{display:none}
 @media print{
@@ -296,7 +310,7 @@ table.wg{border-collapse:separate;border-spacing:0;font-size:12px;min-width:100%
    الإعدادات — حط هنا لينك Google Apps Script (الخطوات في الرسالة)
    لو سبته فاضي الصفحة هتشتغل "وضع تجريبي" والداتا على نفس الجهاز بس
    ===================================================================== */
-const API_URL = 'https://script.google.com/macros/s/AKfycbzZPv3tD8ONtA4tPvHEDtNPNqHrtPwh3eFUrraYGwDb34qnsij8Pf_nRB9_vIh4fZ-qaA/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbzO-r5-381_V7ve9wAxWkPEqdUgATEatK6qVfWUnKCONdL1F9WT5oLD3E-EV_oTT9iA/exec';
 // مثال: const API_URL = 'https://script.google.com/macros/s/AKfycb..../exec';
 
 // بصمة الباسورد الافتراضي (mghoname10) — تقدر تغيّره من الإعدادات جوه الصفحة
@@ -418,7 +432,7 @@ async function pull(){
     if(seq!==writeSeq||inflight||queue.length) return;
     state=res||{};ls.set('sr_cache',JSON.stringify(state));
     if(!state.meta&&isAdmin()){saveMany(seedData());}
-    ready=true;render();pingSeen();checkNotify();
+    ready=true;render();pingSeen();checkNotify();writeMe();
   }catch(e){pulling=false;setOnline(false);if(!ready)fatal('مش قادر أوصل للداتا. اتأكد من النت ومن لينك API_URL.');}
 }
 let seenDone=false;
@@ -500,12 +514,6 @@ function punchTarget(id){
 /* الموقع */
 function distM(a,b,c,d){const R=6371000,r=x=>x*Math.PI/180;const h=Math.sin(r(c-a)/2)**2+Math.cos(r(a))*Math.cos(r(c))*Math.sin(r(d-b)/2)**2;return Math.round(2*R*Math.asin(Math.sqrt(h)));}
 function getPos(){return new Promise((res,rej)=>{if(!navigator.geolocation)return rej({code:9});navigator.geolocation.getCurrentPosition(p=>res(p.coords),rej,{enableHighAccuracy:true,timeout:20000,maximumAge:0});});}
-function geoCheck(c){
-  const gs=list('geos');if(!gs.length)return {ok:true,none:true};let best=null;
-  gs.forEach(g=>{const dist=distM(c.latitude,c.longitude,+g.lat,+g.lng),over=dist-(+g.r||100);if(!best||over<best.over)best={g,dist,over};});
-  return {ok:best.over<=0,...best};
-}
-function parseCoords(s){const m=String(s).match(/(-?\d{1,2}\.\d{3,})\s*,\s*(-?\d{1,3}\.\d{3,})/);return m?{lat:+m[1],lng:+m[2]}:null;}
 const mapLink=(lat,lng)=>`https://www.google.com/maps?q=${lat},${lng}`;
 
 /* بصمة الصباع (بصمة الموبايل نفسه) */
@@ -654,11 +662,11 @@ async function doPunch(){
   punching=true;
   try{
     let dist=null;
-    if(list('geos').length){
+    if(zonesFor(me,tg.d).length){
       stepSheet('بيحدد موقعك…');
       let c;try{c=await getPos();}catch(e){return failSheet('ماقدرتش أعرف موقعك',e?.code===1?'لازم تسمح للتطبيق يعرف موقعك: إعدادات المتصفح ← الموقع ← سماح.':'شغّل الـ GPS (الموقع) من الموبايل وجرّب تاني.');}
-      const gc=geoCheck(c);
-      if(!gc.ok){logFail(me,'geo',gc.dist);return failSheet('انت بعيد عن مكان الشغل',`انت على بعد <b>${gc.dist} متر</b> من "${esc(gc.g.name)}"، والمسموح ${+gc.g.r||100} متر بس.${c.accuracy>100?'<br>الموقع مش دقيق دلوقتي، شغّل الـ GPS واقف في مكان مفتوح.':''}`);}
+      const gc=geoCheck(c,me,tg.d);
+      if(!gc.ok){logFail(me,'geo',gc.dist);return failSheet('انت برا مكان الشغل',`انت برا حدود "${esc(gc.g.name)}" بحوالي <b>${gc.dist} متر</b>. لازم تكون جوه المكان عشان تبصم.${c.accuracy>100?'<br>الموقع مش دقيق دلوقتي، شغّل الـ GPS واقف في مكان مفتوح.':''}`);}
       dist=gc.dist;
     }
     let ok;
@@ -686,7 +694,7 @@ function punchBox(id){
   if(open)info=`دخلت الساعة ${fmtClock(pTime(punchOf(open,id),'in'))}`;
   else if(pTime(p,'in')!=null)info=`حضور ${fmtClock(pTime(p,'in'))}${pTime(p,'out')!=null?` · انصراف ${fmtClock(pTime(p,'out'))}`:''}`;
   const btn=tg.ok?`<button class="punch ${tg.kind==='out'?'out':''}" data-act="punch">${I.finger}<span>${tg.kind==='out'?'بصمة الانصراف':'بصمة الحضور'}</span></button>`:`<div class="punch off">${esc(tg.msg)}</div>`;
-  return `${info?`<div class="punch-info">${info}</div>`:''}${btn}`;
+  return `${info?`<div class="punch-info">${info}</div>`:''}${btn}${mon.on?`<div class="mon-on">📍 متابعة المكان شغالة — خلّي التطبيق مفتوح طول الوردية</div>`:''}`;
 }
 function enrollView(id){
   const e=state.employees[id],m=bioMode();
@@ -700,12 +708,13 @@ function enrollView(id){
 
 /* واجهة الأدمن */
 function punchLine(d,id){
-  const p=punchOf(d,id),fs=Object.values(state.fails?.[d]?.[id]||{});if(!p&&!fs.length)return '';
+  const p=punchOf(d,id),fs=Object.values(state.fails?.[d]?.[id]||{});if(!p&&!fs.length&&!geoOuts(d,id))return '';
   const ti=pTime(p,'in'),to=pTime(p,'out'),ws=workStats(d,id),m=k=>({face:'وش',finger:'صباع'}[p?.[k+'M']]||'')+(p?.[k+'D']!=null?` · ${p[k+'D']}م`:'');
   let h='<div class="pl">';
   if(ti!=null)h+=`<span>${I.fingerS}دخول <b>${fmtClock(ti)}</b> <small>${m('in')}</small></span>`;
   if(to!=null)h+=`<span>خروج <b>${fmtClock(to)}</b> <small>${m('out')}</small></span>`;
   else if(ti!=null&&forgotOut(d,id))h+=`<span class="pl-bad">⚠ مابصمش انصراف</span>`;
+  {const go=geoOuts(d,id);if(go)h+=`<span class="pl-bad">⚠ خرج برا مكانه ${go} مرة</span>`;}
   if(ws.ms)h+=`<span>اشتغل <b>${fmtDur(ws.ms)}</b>${ws.ot?` <small style="color:var(--green)">+${fmtDur(ws.ot)} إضافي</small>`:''}</span>`;
   if(fs.length)h+=`<span class="pl-bad">⚠ ${fs.length} محاولة مرفوضة: ${[...new Set(fs.map(failLabel))].join('، ')}</span>`;
   return h+'</div>';
@@ -723,27 +732,13 @@ function bioSettings(){
   }
   h+=`</div></div>`;
   if(on){
-    h+=`<div class="card"><div class="card-h"><span>أماكن البصمة</span><button class="hbtn sm" data-act="addGeo">+ إضافة</button></div>`;
-    h+=gs.length?gs.map(x=>`<div class="row" data-act="editGeo" data-id="${x.id}"><div style="flex:1"><b>${esc(x.name)}</b><div class="small muted">في حدود ${+x.r||100} متر</div></div><span class="chip loc">تعديل</span></div>`).join(''):`<div class="row muted" style="cursor:default;display:block">لسه ماحددتش مكان، فالبصمة شغالة من أي حتة.<br>روح مكان الشغل ودوس <b>+ إضافة</b> ← <b>استخدم موقعي دلوقتي</b>.</div>`;
+    h+=`<div class="card"><div class="card-h"><span>مكان الشغل على الخريطة</span><button class="hbtn sm" data-act="addGeo">+ إضافة</button></div>`;
+    h+=gs.length?gs.map(x=>`<div class="row" data-act="editGeo" data-id="${x.id}"><div style="flex:1"><b>${esc(x.name)}</b><div class="small muted">${zoneDesc(x)}${x.loc&&state.locations?.[x.loc]?` · خاصة بـ ${esc(state.locations[x.loc].name)}`:''}</div></div><span class="chip loc">تعديل</span></div>`).join(''):`<div class="row muted" style="cursor:default;display:block">لسه ماحددتش مكان الشغل، فالبصمة شغالة من أي حتة.<br>دوس <b>+ إضافة</b> وارسم حدود المكان على الخريطة.</div>`;
+    h+=`<div class="set-body" style="border-top:1px solid var(--line)"><div class="switch"><div><b>متابعة المكان طول الوردية</b><span class="small muted">كل ${MON_EVERY/1000} ثانية بيتأكد إن الموظف جوه حدود مكانه. لو خرج، موبايله يضرب إنذار عالي وانت بيوصلك تنبيه.</span></div><button class="tgl ${monOn()?'on ok':''}" data-act="monToggle" role="switch" aria-checked="${monOn()}" aria-label="متابعة المكان"></button></div></div>`;
     h+='</div>';
   }
   return h;
 }
-function geoSheet(id){
-  const g=id?(state.geos?.[id]||{}):{r:100};
-  editCtx={geo:id||null};
-  openSheet(`<div class="sh-h"><b>${id?'تعديل':'إضافة'} مكان بصمة</b></div>
-  <label class="lbl" for="g-name">اسم المكان</label><input class="inp" id="g-name" value="${esc(g.name||'')}" placeholder="مثال: البوابة الرئيسية" autocomplete="off">
-  <label class="lbl">مكانه على الخريطة</label>
-  <button class="btn sec" data-act="geoHere">📍 استخدم موقعي دلوقتي</button><div class="small muted" id="g-acc" style="margin-top:6px"></div>
-  <input class="inp" id="g-paste" data-input="geoPaste" placeholder="أو الصق الإحداثيات أو لينك جوجل ماب" dir="ltr" style="margin-top:8px" autocomplete="off">
-  <div class="two" style="margin-top:8px"><input class="inp" id="g-lat" inputmode="decimal" placeholder="Latitude" dir="ltr" value="${g.lat??''}"><input class="inp" id="g-lng" inputmode="decimal" placeholder="Longitude" dir="ltr" value="${g.lng??''}"></div>
-  <div id="g-map" class="small" style="margin-top:6px">${g.lat!=null?`<a href="${mapLink(g.lat,g.lng)}" target="_blank" rel="noopener">افتح على الخريطة</a>`:''}</div>
-  <label class="lbl" for="g-r">المسافة المسموحة (بالمتر)</label><input class="inp" id="g-r" type="number" inputmode="numeric" min="10" step="10" value="${+g.r||100}" dir="ltr">
-  <p class="hint">أي بصمة أبعد من كده عن المكان هتترفض. 50 لـ 150 متر مناسبين لأن الـ GPS بتاع الموبايل مش دقيق 100%.</p>
-  <div class="btns"><button class="btn" data-act="saveGeo">حفظ</button>${id?'<button class="btn danger" data-act="delGeo">حذف</button>':''}</div>`);
-}
-function setGeoFields(lat,lng){const a=document.getElementById('g-lat'),b=document.getElementById('g-lng'),m=document.getElementById('g-map');if(a)a.value=lat;if(b)b.value=lng;if(m)m.innerHTML=`<a href="${mapLink(lat,lng)}" target="_blank" rel="noopener">افتح على الخريطة</a>`;}
 
 /* ---------- الهوية والحماية ---------- */
 let myHash=null;
@@ -790,7 +785,7 @@ function nowPanel(){
   });
   const nm=(e,x)=>`<span class="nowp"><b>${esc(e.name)}</b>${x?`<small>${x}</small>`:''}</span>`;
   let h=`<div class="card"><div class="card-h"><span>دلوقتي</span><span class="small">${fmtClock(now)}</span></div><div class="set-body">`;
-  h+=`<div class="nowg"><div class="nowt" style="color:var(--green)">● في الشغل (${inside.length})</div>${inside.length?inside.map(([e,d])=>{const l=state.locations?.[ent(d,e.id)?.loc];return nm(e,`من ${fmtClock(pTime(punchOf(d,e.id),'in'))}${l?' · '+esc(l.name):''}`);}).join(''):'<span class="muted small">مفيش حد جوه دلوقتي</span>'}</div>`;
+  h+=`<div class="nowg"><div class="nowt" style="color:var(--green)">● في الشغل (${inside.length})</div>${inside.length?inside.map(([e,d])=>{const l=state.locations?.[ent(d,e.id)?.loc];return nm(e,`من ${fmtClock(pTime(punchOf(d,e.id),'in'))}${l?' · '+esc(l.name):''}${liveTag(e.id)?'<br>'+liveTag(e.id):''}`);}).join(''):'<span class="muted small">مفيش حد جوه دلوقتي</span>'}</div>`;
   if(late.length)h+=`<div class="nowg"><div class="nowt" style="color:var(--orange)">● ورديتهم بدأت ولسه مابصموش (${late.length})</div>${late.map(([e,w])=>nm(e,`متأخر ${Math.round((now-w.start)/60000)} د`)).join('')}</div>`;
   if(forgot.length)h+=`<div class="nowg"><div class="nowt" style="color:var(--red)">● نسيوا يبصموا انصراف (${forgot.length})</div>${forgot.map(([e,d])=>nm(e,`دخل ${fmtClock(pTime(punchOf(d,e.id),'in'))}`)).join('')}</div>`;
   return h+'</div></div>';
@@ -886,7 +881,7 @@ function mixW(hex,t){const h=safeColor(hex).slice(1),n=parseInt(h.length===3?h.s
 let lastBrand='';
 function applyBrand(){
   const b=brand(),key=(b.color||'')+'|'+(b.name||'')+'|'+(b.logo||'').length;if(key===lastBrand)return;lastBrand=key;
-  const ic=okLogo(b.logo)?b.logo:'icon-192.png';document.querySelectorAll('link[rel=icon],link[rel=apple-touch-icon]').forEach(l=>l.href=ic);
+  const ic=okLogo(b.logo)?b.logo:'app-icon-192.png';document.querySelectorAll('link[rel=icon],link[rel=apple-touch-icon]').forEach(l=>l.href=ic);
   const r=document.documentElement.style;
   if(b.color&&/^#[0-9a-f]{6}$/i.test(b.color)){r.setProperty('--blue',b.color);r.setProperty('--blue2',mixW(b.color,0.18));r.setProperty('--soft',mixW(b.color,0.87));}
   else{r.removeProperty('--blue');r.removeProperty('--blue2');r.removeProperty('--soft');}
@@ -921,6 +916,195 @@ function payCard(){
   <p class="hint">الإضافي بيتحسب من البصمة: لو الموظف فضل بعد وقت ورديته 15 دقيقة أو أكتر.</p>
   <div class="btns" style="margin-top:0"><button class="btn" type="submit">حفظ</button></div></form></div>`;
 }
+
+/* ---------- مناطق الشغل على الخريطة ---------- */
+const LEAF='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/';
+function zonesFor(id,d){
+  const all=list('geos');if(!all.length)return [];
+  const loc=id&&d?ent(d,id)?.loc:null;
+  const linked=loc?all.filter(z=>z.loc===loc):[];
+  if(linked.length)return linked;
+  const general=all.filter(z=>!z.loc);
+  return general.length?general:all;
+}
+// المسافة لبرا المنطقة بالمتر (0 = جوه)
+function zoneOut(c,z){
+  const lat=c.latitude,lng=c.longitude;
+  if(Array.isArray(z.pts)&&z.pts.length>=3){
+    const k=Math.cos(lat*Math.PI/180)*111320,M=110540,P=z.pts.map(([a,b])=>[(b-lng)*k,(a-lat)*M]);
+    let inside=false;for(let i=0,j=P.length-1;i<P.length;j=i++){const[xi,yi]=P[i],[xj,yj]=P[j];if(((yi>0)!==(yj>0))&&(0<(xj-xi)*(0-yi)/(yj-yi)+xi))inside=!inside;}
+    if(inside)return 0;
+    let best=Infinity;for(let i=0,j=P.length-1;i<P.length;j=i++){const[x1,y1]=P[j],[x2,y2]=P[i],dx=x2-x1,dy=y2-y1,L=dx*dx+dy*dy;let t=L?-(x1*dx+y1*dy)/L:0;t=Math.max(0,Math.min(1,t));best=Math.min(best,Math.hypot(x1+t*dx,y1+t*dy));}
+    return Math.max(0,Math.round(best-(+z.buf||20)));
+  }
+  if(z.lat!=null)return Math.max(0,distM(lat,lng,+z.lat,+z.lng)-(+z.r||100));
+  return Infinity;
+}
+function geoCheck(c,id,d){
+  const zs=zonesFor(id,d||(id&&findOpen(id))||today());if(!zs.length)return {ok:true,none:true};
+  let best=null;zs.forEach(g=>{const dist=zoneOut(c,g);if(!best||dist<best.dist)best={g,dist};});
+  return {ok:best.dist<=0,...best};
+}
+function parseCoords(s){const m=String(s).match(/(-?\d{1,2}\.\d{3,})\s*,\s*(-?\d{1,3}\.\d{3,})/);return m?{lat:+m[1],lng:+m[2]}:null;}
+const zoneDesc=z=>Array.isArray(z.pts)?`منطقة متحددة بـ ${z.pts.length} نقط · سماحية ${+z.buf||20} متر`:`دايرة نص قطرها ${+z.r||100} متر`;
+function loadCss(href){return new Promise(r=>{if(document.querySelector(`link[href="${href}"]`))return r();const l=document.createElement('link');l.rel='stylesheet';l.href=href;l.onload=r;l.onerror=r;document.head.appendChild(l);});}
+async function loadLeaflet(){if(window.L)return;await loadCss(LEAF+'leaflet.css');await loadScript(LEAF+'leaflet.js');}
+
+const zed={map:null,pts:[],poly:null,marks:[],sat:true,layers:null};
+async function zoneSheet(id){
+  const z=id?(state.geos?.[id]||{}):{buf:20};
+  editCtx={geo:id||null};
+  zed.pts=Array.isArray(z.pts)?z.pts.map(p=>[+p[0],+p[1]]):[];
+  openSheet(`<div class="sh-h"><b>${id?'تعديل':'تحديد'} مكان الشغل</b></div>
+  <label class="lbl" for="g-name">اسم المكان</label><input class="inp" id="g-name" value="${esc(z.name||'')}" placeholder="مثال: البوابة الرئيسية" autocomplete="off">
+  <div class="zmap" id="zmap"><div class="zmap-load">بيحمّل الخريطة…</div></div>
+  <div class="small muted" id="z-info" style="margin-top:6px">دوس على الخريطة حوالين حدود مكان الشغل، نقطة نقطة.</div>
+  <div class="ztools"><button data-act="zUndo">↶ تراجع</button><button data-act="zClear">مسح</button><button data-act="zHere">📍 مكاني</button><button data-act="zAddHere">➕ ضيف مكاني كنقطة</button><button data-act="zLayer">قمر صناعي / شوارع</button></div>
+  <label class="lbl">المنطقة دي خاصة بـ</label>
+  <div class="pick" data-group="zloc"><button data-act="sel" data-v="" class="${!z.loc?'on':''}">كل الأماكن</button>${list('locations').map(l=>`<button data-act="sel" data-v="${l.id}" class="${z.loc===l.id?'on':''}">${esc(l.name)}</button>`).join('')}</div>
+  <p class="hint">لو ربطتها بمكان (زي بوابة رقم 1)، اللي متسجل في المكان ده بس هو اللي بيتراجع عليها.</p>
+  <label class="lbl" for="g-buf">سماحية الـ GPS (بالمتر)</label><input class="inp" id="g-buf" type="number" inputmode="numeric" min="0" step="5" value="${+z.buf||20}" dir="ltr">
+  <p class="hint">الـ GPS بيغلط شوية، فلو حد واقف على الحدود مايتحسبش برا. 15 لـ 30 متر مناسبين.</p>
+  <div class="btns"><button class="btn" data-act="saveZone">حفظ</button>${id?'<button class="btn danger" data-act="delGeo">حذف</button>':''}</div>`);
+  try{await loadLeaflet();}catch(e){const m=document.getElementById('zmap');if(m)m.innerHTML='<div class="zmap-load">مش قادر أحمّل الخريطة، اتأكد من النت</div>';return;}
+  const el=document.getElementById('zmap');if(!el)return;el.innerHTML='';
+  const map=L.map(el,{zoomControl:true,attributionControl:true});zed.map=map;
+  const sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:20,maxNativeZoom:19,attribution:'Esri'});
+  const osm=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:20,maxNativeZoom:19,attribution:'© OpenStreetMap'});
+  zed.layers={sat,osm};zed.sat=true;sat.addTo(map);
+  list('geos').filter(g=>g.id!==id).forEach(g=>{if(Array.isArray(g.pts))L.polygon(g.pts,{color:'#fff',weight:1,dashArray:'4 4',fillOpacity:.08}).addTo(map);else if(g.lat!=null)L.circle([g.lat,g.lng],{radius:+g.r||100,color:'#fff',weight:1,dashArray:'4 4',fillOpacity:.08}).addTo(map);});
+  if(zed.pts.length)map.fitBounds(L.latLngBounds(zed.pts).pad(0.4));
+  else if(z.lat!=null)map.setView([z.lat,z.lng],18);
+  else{map.setView([30.0444,31.2357],16);getPos().then(c=>{if(zed.map===map&&!zed.pts.length)map.setView([c.latitude,c.longitude],18);}).catch(()=>{});}
+  map.on('click',ev=>{zed.pts.push([+ev.latlng.lat.toFixed(6),+ev.latlng.lng.toFixed(6)]);drawZone();});
+  drawZone();setTimeout(()=>map.invalidateSize(),250);
+  window.__onClose=()=>{try{map.remove();}catch(e){}zed.map=null;};
+}
+function drawZone(){
+  const map=zed.map;if(!map)return;
+  if(zed.poly){zed.poly.remove();zed.poly=null;}zed.marks.forEach(m=>m.remove());zed.marks=[];
+  const col=getComputedStyle(document.documentElement).getPropertyValue('--blue').trim()||'#1f5fa8';
+  if(zed.pts.length>=2)zed.poly=(zed.pts.length>=3?L.polygon(zed.pts,{color:'#ffd43b',weight:3,fillColor:'#ffd43b',fillOpacity:.2}):L.polyline(zed.pts,{color:'#ffd43b',weight:3})).addTo(map);
+  zed.pts.forEach((p,i)=>zed.marks.push(L.circleMarker(p,{radius:6,color:'#fff',weight:2,fillColor:i===zed.pts.length-1?'#e03131':col,fillOpacity:1}).addTo(map)));
+  const inf=document.getElementById('z-info');
+  if(inf)inf.textContent=zed.pts.length<3?`دوس على الخريطة حوالين حدود مكان الشغل، نقطة نقطة (محتاج 3 نقط على الأقل — عندك ${zed.pts.length}).`:`تمام: ${zed.pts.length} نقط. كمّل لو عاوز تظبط الحدود أكتر، أو دوس حفظ.`;
+}
+
+/* ---------- متابعة المكان أثناء الوردية ---------- */
+const MON_EVERY=30000;
+const mon={on:false,watch:null,timer:null,me:null,d:null,outN:0,alarm:false,last:null,lastLive:0,lastState:null,wake:null,snooze:0,lastFix:0};
+const monOn=()=>!pset().monOff;
+function monTarget(){
+  if(isAdmin()||payLocked()||!punchOn()||!monOn())return null;
+  const me=myEmp();if(!me)return null;const d=findOpen(me);if(!d)return null;
+  if(!zonesFor(me,d).length)return null;return {me,d};
+}
+function ensureMon(){
+  const t=monTarget();
+  if(t&&!mon.on)startMon(t);else if(!t&&mon.on)stopMon();
+  else if(t){mon.me=t.me;mon.d=t.d;}
+}
+function startMon(t){
+  if(!navigator.geolocation)return;
+  mon.on=true;mon.me=t.me;mon.d=t.d;mon.outN=0;
+  try{mon.watch=navigator.geolocation.watchPosition(p=>onMonPos(p.coords),()=>{},{enableHighAccuracy:true,maximumAge:15000,timeout:30000});}catch(e){}
+  mon.timer=setInterval(()=>{if(Date.now()-mon.lastFix>MON_EVERY-2000)navigator.geolocation.getCurrentPosition(p=>onMonPos(p.coords),()=>{},{enableHighAccuracy:true,maximumAge:10000,timeout:25000});},MON_EVERY);
+  wakeOn();
+}
+function stopMon(){
+  mon.on=false;try{navigator.geolocation.clearWatch(mon.watch);}catch(e){}clearInterval(mon.timer);mon.watch=null;mon.timer=null;
+  if(mon.alarm)stopAlarm(false);wakeOff();
+}
+async function wakeOn(){try{if('wakeLock' in navigator&&!mon.wake&&document.visibilityState==='visible'){mon.wake=await navigator.wakeLock.request('screen');mon.wake.addEventListener('release',()=>{mon.wake=null;});}}catch(e){}}
+function wakeOff(){try{mon.wake&&mon.wake.release();}catch(e){}mon.wake=null;}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&mon.on){wakeOn();navigator.geolocation.getCurrentPosition(p=>onMonPos(p.coords),()=>{},{enableHighAccuracy:true,maximumAge:5000,timeout:20000});}});
+function onMonPos(c){
+  if(!mon.on)return;
+  const now=Date.now();if(now-mon.lastFix<8000&&!mon.alarm)return;mon.lastFix=now;
+  if(c.accuracy>200&&!mon.alarm)return; // قراية مش دقيقة
+  const gc=geoCheck(c,mon.me,mon.d);mon.last={gc,c,t:now};
+  if(gc.ok){mon.outN=0;if(mon.alarm)stopAlarm(true);}
+  else{mon.outN++;if(mon.outN>=2&&!mon.alarm)startAlarm(gc);else if(mon.alarm)updAlarm(gc);}
+  const st=gc.ok?'in':'out';
+  if(st!==mon.lastState){
+    const u={[`live/${mon.me}`]:{t:'__NOW__',in:gc.ok,d:gc.dist|0,a:Math.round(c.accuracy)}};
+    if(mon.lastState!==null||st==='out')u[`geolog/${mon.d}/${mon.me}/${now}`]=st==='out'?`out:${gc.dist|0}`:'in';
+    if(st==='in'||mon.outN>=2){mon.lastState=st;mon.lastLive=now;saveMany(u);}
+  } else if(now-mon.lastLive>120000){mon.lastLive=now;save(`live/${mon.me}`,{t:'__NOW__',in:gc.ok,d:gc.dist|0,a:Math.round(c.accuracy)});}
+}
+
+/* الإنذار */
+let siren=null;
+function sirenOn(){
+  try{unlockAudio();if(!actx||siren)return;const g=actx.createGain();g.gain.value=0.9;g.connect(actx.destination);
+    const o1=actx.createOscillator(),o2=actx.createOscillator();o1.type='square';o2.type='sawtooth';o2.detune.value=12;
+    const lfo=actx.createOscillator(),lg=actx.createGain();lfo.type='triangle';lfo.frequency.value=1.6;lg.gain.value=450;lfo.connect(lg);lg.connect(o1.frequency);lg.connect(o2.frequency);
+    o1.frequency.value=o2.frequency.value=1050;o1.connect(g);o2.connect(g);o1.start();o2.start();lfo.start();siren={g,o:[o1,o2,lfo]};}catch(e){}
+  try{navigator.vibrate&&navigator.vibrate([700,250,700,250,700,250,700,250,700,250,700,250,700,250,700]);}catch(e){}
+}
+function sirenOff(){try{siren&&siren.o.forEach(o=>o.stop());siren&&siren.g.disconnect();}catch(e){}siren=null;try{navigator.vibrate&&navigator.vibrate(0);}catch(e){}}
+let sirenLoop=null;
+function startAlarm(gc){
+  mon.alarm=true;mon.snooze=0;
+  let el=document.getElementById('alarm');if(!el){el=document.createElement('div');el.id='alarm';document.body.appendChild(el);}
+  el.innerHTML=`<div class="al-in"><div class="al-ic">⚠</div><h1>ارجع مكانك فورًا!</h1><p id="al-txt"></p><p class="al-sm">الأدمن اتبلّغ إنك برا مكان شغلك. الإنذار هيقف لوحده أول ما ترجع.</p><button data-act="alarmAck">أنا راجع دلوقتي</button></div>`;
+  el.classList.add('show');updAlarm(gc);
+  if(Date.now()>mon.snooze)sirenOn();
+  clearInterval(sirenLoop);sirenLoop=setInterval(()=>{if(!mon.alarm)return;if(Date.now()>mon.snooze){sirenOn();}},6000);
+  try{if('Notification' in window&&Notification.permission==='granted')navigator.serviceWorker?.ready.then(r=>r.showNotification('⚠ ارجع مكانك فورًا!',{body:`انت برا مكان شغلك بـ ${gc.dist} متر`,tag:'geo-alarm',renotify:true,requireInteraction:true,vibrate:[700,250,700,250,700],icon:'app-icon-192.png',lang:'ar',dir:'rtl'}));}catch(e){}
+}
+function updAlarm(gc){const t=document.getElementById('al-txt');if(t)t.innerHTML=`انت برا "<b>${esc(gc.g.name)}</b>" بحوالي <b>${gc.dist} متر</b>`;}
+function stopAlarm(back){
+  mon.alarm=false;clearInterval(sirenLoop);sirenOff();
+  const el=document.getElementById('alarm');if(el)el.classList.remove('show');
+  try{navigator.serviceWorker?.ready.then(r=>r.getNotifications({tag:'geo-alarm'}).then(ns=>ns.forEach(n=>n.close())));}catch(e){}
+  if(back)toast('رجعت مكانك ✓');
+}
+
+/* ---------- إشعارات الموبايل ---------- */
+const ub64u=s=>{s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';return Uint8Array.from(atob(s),c=>c.charCodeAt(0));};
+const pushOK=()=>'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window&&mode==='gas';
+const pushOnHere=()=>pushOK()&&Notification.permission==='granted'&&ls.get('sr_push')===(isAdmin()?'admin':myEmp()||'');
+async function writeMe(){try{if(!('caches' in window))return;const c=await caches.open('sr-me');await c.put('/__me',new Response(JSON.stringify({emp:isAdmin()?null:myEmp(),admin:isAdmin(),api:API_URL,brand:brand().name||''})));}catch(e){}}
+async function enablePush(){
+  if(!pushOK())return toast('الموبايل ده مش بيدعم الإشعارات من المتصفح');
+  if(isIOS()&&!isStandalone())return installHelp();
+  const key=state._push;if(!key)return toast('لازم تحدّث كود Apps Script الأول');
+  let perm=Notification.permission;if(perm==='default')perm=await Notification.requestPermission();
+  if(perm!=='granted')return failSheet('الإشعارات مقفولة','افتح إعدادات المتصفح ← الإشعارات ← واسمح للموقع ده، وجرّب تاني.');
+  try{
+    const reg=await navigator.serviceWorker.ready;let sub=await reg.pushManager.getSubscription();
+    if(sub&&sub.options?.applicationServerKey){const cur=new Uint8Array(sub.options.applicationServerKey),want=ub64u(key);if(cur.length!==want.length||cur.some((b,i)=>b!==want[i])){await sub.unsubscribe();sub=null;}}
+    if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:ub64u(key)});
+    const h=(await sha(sub.endpoint)).slice(0,16);
+    await writeMe();
+    if(isAdmin())save(`asubs/${h}`,{e:sub.endpoint,t:'__NOW__'});
+    else{const me=myEmp();if(!me)return;save(`subs/${me}/${h}`,{e:sub.endpoint,t:'__NOW__'});}
+    ls.set('sr_push',isAdmin()?'admin':myEmp());render();
+    okSheet('الإشعارات اتفعلت','الرسايل والتنبيهات هتوصلك على الموبايل حتى لو التطبيق مقفول.');
+  }catch(e){failSheet('ماقدرتش أفعّل الإشعارات','جرّب تاني، ولو مانفعش اقفل المتصفح وافتحه. ('+esc(e.message||e)+')');}
+}
+function pushCard(){
+  if(!pushOK()||pushOnHere())return '';
+  return `<div class="install"><span class="ic" style="background:var(--soft);display:grid;place-items:center;font-size:20px">🔔</span><div><b>فعّل الإشعارات</b><small>عشان الرسايل والتنبيهات توصلك والتطبيق مقفول</small></div><button class="go" data-act="enablePush">فعّلها</button></div>`;
+}
+
+/* ---------- للأدمن: حالة المتابعة ---------- */
+function liveTag(id){
+  if(!monOn())return '';
+  const od=findOpen(id);if(!od||!zonesFor(id,od).length)return '';
+  const lv=state.live?.[id],age=lv?Date.now()-(+lv.t||0):Infinity;
+  if(!lv||age>5*60000)return `<b style="color:var(--muted)">⏸ مش متابع${lv?` من ${Math.round(age/60000)} د`:''}</b>`;
+  return lv.in?'<b style="color:var(--green)">✓ في مكانه</b>':`<b style="color:var(--red)">⚠ برا مكانه ${lv.d} م</b>`;
+}
+let lastGeoSeen=null;
+function adminGeoWatch(){
+  if(!isAdmin())return;let newest=0,who=null,val='';
+  const g=state.geolog||{};for(const d in g)for(const e in g[d])for(const ts in g[d][e]){if(+ts>newest&&String(g[d][e][ts]).startsWith('out')){newest=+ts;who=e;val=g[d][e][ts];}}
+  if(lastGeoSeen===null){lastGeoSeen=newest;return;}
+  if(newest>lastGeoSeen){lastGeoSeen=newest;toast(`⚠ ${ename(who)} خرج برا مكانه (${val.split(':')[1]||'?'} م)`);chime(true);}
+}
+const geoOuts=(d,id)=>Object.values(state.geolog?.[d]?.[id]||{}).filter(v=>String(v).startsWith('out')).length;
 
 /* ---------- install (PWA) ---------- */
 let deferredPrompt=null;
@@ -990,7 +1174,7 @@ function checkNotify(){
   const un=unreadFor(me).filter(m=>!seen[m.id]);
   if(un.length){un.forEach(m=>seen[m.id]=1);ls.set('sr_notified',JSON.stringify(seen));
     if(notifyReady){toast('وصلتك رسالة جديدة');chime();
-      if('Notification' in window&&Notification.permission==='granted'&&navigator.serviceWorker)navigator.serviceWorker.ready.then(r=>r.showNotification('رسالة جديدة',{body:msgText(un[0],me).slice(0,160),icon:'icon-192.png',badge:'icon-192.png',tag:'msg-'+un[0].id,renotify:true,silent:false,vibrate:[200,100,200],lang:'ar',dir:'rtl'})).catch(()=>{});}}
+      if('Notification' in window&&Notification.permission==='granted'&&navigator.serviceWorker)navigator.serviceWorker.ready.then(r=>r.showNotification('رسالة جديدة',{body:msgText(un[0],me).slice(0,160),icon:'app-icon-192.png',badge:'app-icon-192.png',tag:'msg-'+un[0].id,renotify:true,silent:false,vibrate:[200,100,200],lang:'ar',dir:'rtl'})).catch(()=>{});}}
   notifyReady=true;
 }
 
@@ -1024,6 +1208,7 @@ function render(){
   const y=window.scrollY;
   $app.innerHTML=route();
   window.scrollTo(0,y);
+  try{ensureMon();adminGeoWatch();}catch(e){}
 }
 document.addEventListener('focusout',()=>{if(pendingRender)setTimeout(render,0);});
 const top0 = () => window.scrollTo(0,0);
@@ -1082,7 +1267,7 @@ function userView(id,own){
   let h=own?'':`<div class="pbar"><span>بتشوف صفحة ${esc(e.name)} زي ما هو شايفها</span><button data-act="endPreview">رجوع</button></div>`;
   const un=unreadFor(id);
   h+=`<header class="top">${hLogo()}<div><div class="t-title">أهلاً يا ${esc(e.name)}</div><div class="t-sub">${brand().name?esc(brand().name)+" · ":""}${dayName(T)} ${fullD(T)}</div></div><button class="hbtn bell" data-act="openMsgs" data-id="${id}" data-own="${own?1:''}">الرسايل${un.length?`<span class="badge">${un.length}</span>`:''}</button></header>${netBar()}${localWarn()}<div class="wrap">`;
-  if(own) h+=installBanner();
+  if(own) h+=installBanner()+pushCard();
   {const od=findOpen(id);if(od&&forgotOut(od,id))h+=`<div class="forgot">⚠ نسيت تبصم انصراف! ورديتك خلصت، دوس على بصمة الانصراف تحت.</div>`;}
   if(un.length) h+=`<button class="newmsg" data-act="openMsgs" data-id="${id}" data-own="${own?1:''}">عندك ${un.length===1?'رسالة جديدة':un.length+' رسايل جديدة'} ←<span>${esc(msgText(un[0],id))}</span></button>`;
   h+=`<div class="hc"><div class="hc-l">النهارده</div>`;
@@ -1133,6 +1318,7 @@ function tabToday(){
   emps.forEach(e=>{const st=ent(d,e.id)?.status;if(st&&state.statuses?.[st]?.work)working++;const a=attOf(d,e.id);if(a)c[a]++;});
   let h=nav(`${dayName(d)} ${fullD(d)}`,d===today()?'النهارده':'اضغط هنا لاختيار يوم','dayStep',`<input type="date" value="${d}" data-change="setDate" aria-label="اختار يوم">`);
   h+=`<div class="stats"><div class="stat"><b>${working}</b><span>في الشغل</span></div><div class="stat"><b style="color:${ATT.present.c}">${c.present}</b><span>حضر</span></div><div class="stat"><b style="color:${ATT.late.c}">${c.late}</b><span>متأخر</span></div><div class="stat"><b style="color:${ATT.absent.c}">${c.absent}</b><span>غاب</span></div></div>`;
+  h+=pushCard();
   if(d===today()) h+=nowPanel();
   h+=gapHtml(d);
   if(!emps.length) return h+empty('مفيش موظفين','ضيفهم من تبويب الموظفين');
@@ -1353,15 +1539,20 @@ const A={
   setBioMode:d=>save('settings/bioMode',d.v==='both'?null:d.v),
   liveToggle:()=>save('settings/liveOff',liveOn()?true:null),
   setGrace:d=>save('settings/grace',+d.v,`مهلة التأخير بقت ${d.v} دقيقة`),
-  addGeo:()=>geoSheet(),
-  editGeo:d=>geoSheet(d.id),
-  geoHere:async(d,el)=>{const acc=document.getElementById('g-acc');el.disabled=true;if(acc)acc.textContent='بيحدد موقعك…';
-    try{const c=await getPos();setGeoFields(+c.latitude.toFixed(6),+c.longitude.toFixed(6));if(acc)acc.textContent=`اتحدد ✓ (الدقة حوالي ${Math.round(c.accuracy)} متر)`;}
-    catch(e){if(acc)acc.textContent=e?.code===1?'لازم تسمح بالموقع من إعدادات المتصفح':'ماقدرتش أحدد موقعك، شغّل الـ GPS';}
-    el.disabled=false;},
-  saveGeo:()=>{const n=$sheet.querySelector('#g-name').value.trim(),lat=parseFloat($sheet.querySelector('#g-lat').value),lng=parseFloat($sheet.querySelector('#g-lng').value),r=Math.max(10,parseInt($sheet.querySelector('#g-r').value)||100);
-    if(!n)return toast('اكتب اسم المكان');if(!isFinite(lat)||!isFinite(lng)||Math.abs(lat)>90||Math.abs(lng)>180)return toast('حدد المكان على الخريطة الأول');
-    const id=editCtx?.geo||'g'+uid(),old=state.geos?.[id]||{order:Date.now()};closeSheet();save(`geos/${id}`,{...old,name:n,lat,lng,r},`مكان بصمة "${n}" (${r} متر)`);toast('اتحفظ المكان');},
+  addGeo:()=>zoneSheet(),
+  editGeo:d=>zoneSheet(d.id),
+  zUndo:()=>{zed.pts.pop();drawZone();},
+  zClear:()=>{zed.pts=[];drawZone();},
+  zLayer:()=>{if(!zed.map)return;zed.sat=!zed.sat;const{sat,osm}=zed.layers;if(zed.sat){osm.remove();sat.addTo(zed.map);}else{sat.remove();osm.addTo(zed.map);}},
+  zHere:async()=>{try{const c=await getPos();zed.map&&zed.map.setView([c.latitude,c.longitude],19);toast(`الدقة حوالي ${Math.round(c.accuracy)} متر`);}catch(e){toast('شغّل الـ GPS واسمح بالموقع');}},
+  zAddHere:async()=>{toast('بيحدد مكانك…');try{const c=await getPos();zed.pts.push([+c.latitude.toFixed(6),+c.longitude.toFixed(6)]);drawZone();zed.map&&zed.map.setView([c.latitude,c.longitude]);toast(`اتضافت نقطة (الدقة ${Math.round(c.accuracy)} م) — امشي لركن تاني وضيف`);}catch(e){toast('شغّل الـ GPS واسمح بالموقع');}},
+  saveZone:()=>{const n=$sheet.querySelector('#g-name').value.trim(),buf=Math.max(0,parseInt($sheet.querySelector('#g-buf').value)||20),loc=selVal('zloc')||null;
+    if(!n)return toast('اكتب اسم المكان');if(zed.pts.length<3)return toast('ارسم 3 نقط على الأقل حوالين المكان');
+    const id=editCtx?.geo||'g'+uid(),old=state.geos?.[id]||{order:Date.now()};const z={...old,name:n,pts:zed.pts.slice(),buf,loc};delete z.lat;delete z.lng;delete z.r;if(!loc)delete z.loc;
+    closeSheet();save(`geos/${id}`,z,`حدد مكان الشغل "${n}" على الخريطة (${zed.pts.length} نقط)`);toast('اتحفظ المكان');},
+  monToggle:()=>save('settings/monOff',monOn()?true:null,monOn()?'قفل متابعة المكان':'شغّل متابعة المكان'),
+  alarmAck:()=>{mon.snooze=Date.now()+60000;sirenOff();toast('الإنذار هيرجع بعد دقيقة لو لسه برا');},
+  enablePush:()=>enablePush(),
   delGeo:()=>{const id=editCtx?.geo;if(!id)return;confirmSheet('حذف المكان','البصمة مش هتتقبل من المكان ده تاني.','احذف',()=>save(`geos/${id}`,null,`حذف مكان بصمة "${state.geos?.[id]?.name||''}"`),true);},
   // عرض الأسبوع
   wkView:d=>{view.wk=d.v;ls.set('sr_wk',d.v);render();},
@@ -1405,7 +1596,8 @@ const A={
   pickLogo:()=>document.getElementById('logo-in').click(),
   delLogo:()=>save('settings/brand/logo',null,'شال اللوجو'),
   // install
-  install:async()=>{if(deferredPrompt){const p=deferredPrompt;deferredPrompt=null;p.prompt();try{await p.userChoice;}catch(e){}render();}else installHelp();},
+  install:async()=>{if(!deferredPrompt&&!isIOS()){toast('لحظة…');for(let i=0;i<16&&!deferredPrompt;i++)await sleep(250);}
+    if(deferredPrompt){const p=deferredPrompt;deferredPrompt=null;p.prompt();try{const r=await p.userChoice;if(r?.outcome==='accepted')toast('بيتسطب… هتلاقيه على الشاشة الرئيسية');}catch(e){}render();}else installHelp();},
   hideInstall:()=>{ls.set('sr_inst_hide','1');render();},
   // messages
   testSound:()=>chime(true),
@@ -1502,7 +1694,7 @@ const S={
   }
 };
 document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el||el.disabled)return;const f=A[el.dataset.act];if(f){e.preventDefault();f(el.dataset,el);}});
-document.addEventListener('input',e=>{if(e.target.dataset?.input==='geoPaste'){const c=parseCoords(e.target.value);if(c)setGeoFields(c.lat,c.lng);return;}if(e.target.dataset?.input==='mText'){draft.text=e.target.value;const pv=document.getElementById('m-prev');if(pv)pv.innerHTML=previewHtml();}});
+document.addEventListener('input',e=>{if(e.target.dataset?.input==='mText'){draft.text=e.target.value;const pv=document.getElementById('m-prev');if(pv)pv.innerHTML=previewHtml();}});
 document.addEventListener('change',e=>{const k=e.target.dataset?.change;if(k&&C[k])C[k](e.target);});
 document.addEventListener('submit',e=>{const k=e.target.dataset?.submit;if(!k)return;e.preventDefault();S[k]&&S[k](e.target);});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$sheet.classList.contains('open'))closeSheet();});
@@ -1513,7 +1705,7 @@ async function init(){
   deviceId=getDeviceId();
   try{myHash=window.crypto?.subtle?await sha(deviceId):deviceId;}catch(e){myHash=deviceId;}
   view.wk=ls.get('sr_wk')||'grid';
-  if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
+  if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).catch(()=>{});
   if(API_URL){
     mode='gas';
     try{queue=JSON.parse(ls.get('sr_queue')||'[]')||[];}catch(e){queue=[];}
